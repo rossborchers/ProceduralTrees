@@ -4,17 +4,20 @@ using System;
 namespace LSystem
 {
     [Serializable]
-    public class CharStringDict : SerializableDictionary<char, string>{}
-
-    [Serializable]
     public class RuleSet
     {
+        public bool Fertile { get { return fertile; }  set { fertile = value; } }
+        [SerializeField]
+        protected bool fertile = true;
+
         public CharStringDict Rules { get { return rules; } private set { } }
         [SerializeField]
         protected CharStringDict rules = new CharStringDict();
 
         public Sentence NextGeneration(Sentence before)
         {
+            if (!fertile) return new Sentence("");
+
             string after = "";
             char[] arr = before.ToCharArray();
             foreach(char c in arr)
@@ -24,6 +27,7 @@ namespace LSystem
                 {
                     after += result;
                 }
+                else after += c;
             }
             return new Sentence(after);
         }

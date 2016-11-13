@@ -7,59 +7,69 @@ namespace LSystem
 {
     public class LineBranch : Module 
     {
-        Vector3 end;
+        [SerializeField]
+        protected float localGrowMultiplier = 1f;
 
-        public override ParameterBundle Execute(ParameterBundle bundle)
+        [SerializeField]
+        protected float generationCutoff = 4;
+
+        [SerializeField]
+        protected float startGrowSize = 1f;
+
+        [SerializeField]
+        protected float maxGrowSpeed = 4f;
+
+        [SerializeField]
+        protected float minGrowSpeed = 1f;
+
+        [SerializeField]
+        protected float sizeMultiplier = 0.85f;
+
+        protected Vector3 end;
+       
+        public override void Execute(ParameterBundle bundle)
         {
-            bool fatal = false;
             Vector3 position, heading;
             Sentence sentence;
             CharGameObjectDict implementations;
-            float growSpeed;
+            int generation;
             RuleSet rules;
-            if (!bundle.Get("Sentence", out sentence)) fatal = true;
-            if (!bundle.Get("Implementations", out implementations)) fatal = true;
-            if (!bundle.Get("RuleSet", out rules)) fatal = true;
-            if (!bundle.Get("Position", out position)) fatal = true;
-            if (!bundle.Get("Heading", out heading)) fatal = true;
-            if (!bundle.Get("GrowSpeed", out growSpeed))
+
+            if (!GetCoreParameters(bundle, out sentence, out implementations, out rules)
+             || !GetPositionParameters(bundle, out generation, out position, out heading)) return;
+            if ((generation > generationCutoff)) return;
+
+            float size;
+            if(bundle.Get("GrowSize", out size))
             {
-                growSpeed = 1;
-                Debug.LogWarning("float GrowSpeed parameter missing in LineBranch. Please make sure to include it");
+                startGrowSize = size;
             }
 
-            ParameterBundle returnBundle = new ParameterBundle();
-            if(!fatal)
-            {
-                transform.position = position;
-                end = position;
+            transform.position = position;
+            end = position;
 
-                StartCoroutine(Grow(sentence, heading, rules, implementations, growSpeed, bundle));
-            }
-            else
+          
+            StartCoroutine(Grow(sentence, heading, rules, implementations, generation, UnityEngine.Random.Range(minGrowSpeed, maxGrowSpeed), bundle));
+        }
+
+        IEnumerator Grow(Sentence sentence, Vector3 heading, RuleSet rules, CharGameObjectDict implementations, int generation, float growSpeed, ParameterBundle bundle)
+        {
+            transform.up = ((transform.position + heading) - transform.position).normalized;
+            while(Vector3.Distance(transform.position, end) < startGrowSize)
             {
-                Debug.LogError("Default parameter missing!", gameObject);
+                end += heading * Mathf.Min(heading.magnitude * Time.deltaTime * growSpeed * localGrowMultiplier, startGrowSize);
+                yield return null;
             }
-            return returnBundle;
+
+            bundle.Set("Position", end);
+            bundle.SetOrPut("GrowSize", startGrowSize * sizeMultiplier);
+           
+            ProcessNextModule(sentence, implementations, rules, bundle);
         }
 
         void OnDrawGizmos()
         {
             Gizmos.DrawLine(transform.position, end);
-        }
-
-        IEnumerator Grow(Sentence sentence, Vector3 heading, RuleSet rules, CharGameObjectDict implementations, float growSpeed, ParameterBundle bundle)
-        {
-            while(Vector3.Distance(transform.position, end) < 1)
-            {
-                end += heading * Time.deltaTime * growSpeed;
-                yield return null;
-            }
-
-            // Once done:
-            if(!sentence.HasNext()) sentence = rules.NextGeneration(sentence);
-            List<KeyValuePair<GameObject, Sentence>> modules = ModuleUtil.CreateNextModules(sentence, implementations);
-            ModuleUtil.ExecuteList(modules, bundle);
         }
     }
 

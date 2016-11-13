@@ -14,8 +14,13 @@ namespace LSystem
         public void OnEnable()
         {
             serIsRoot = serializedObject.FindProperty("isRoot");
+            setInheritHeading = serializedObject.FindProperty("inheritHeading");
             serAxiom = serializedObject.FindProperty("axiom");
-    }
+
+            serPreGrow = serializedObject.FindProperty("preGrow");
+            serPreGrowIterations = serializedObject.FindProperty("preGrowIterations");
+            serIterativeGrowth = serializedObject.FindProperty("iterativeGrowth");
+        }
 
         public override void OnInspectorGUI()
         {
@@ -30,16 +35,29 @@ namespace LSystem
 
             // Can multi edit
             EditorGUILayout.PropertyField(serIsRoot);
+            EditorGUILayout.PropertyField(setInheritHeading);
             EditorGUILayout.PropertyField(serAxiom);
+
+            EditorGUILayout.Space();
+
+            EditorGUILayout.PropertyField(serPreGrow);
+            if (serPreGrow.boolValue)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(serPreGrowIterations);
+           
+                EditorGUI.indentLevel--;
+            }
+            EditorGUILayout.PropertyField(serIterativeGrowth);
+
+
             EditorGUILayout.Space();
 
             //Can't multi edit
 
             DrawStartingParams();
-            EditorGUILayout.Space();
 
             DrawRules();
-            EditorGUILayout.Space();
 
             DrawImplementations();
             EditorGUILayout.Space();
@@ -50,28 +68,26 @@ namespace LSystem
 
         protected void DrawStartingParams()
         {
-            StringObjectDict startingParams = ((Seed)target).StartingParameters;
-            List<string> keys = startingParams.KeyList;
-            List<object> values = startingParams.ValueList;
-
-            if (values.Count != keys.Count)
-            {
-                Debug.LogError("StartingParam value count not equal to key count!");
-                keys.Clear();
-                values.Clear();
-            }
-
+            Dictionary<string, object> dict = ((Seed)target).StartingParameters.StoreDictionary;
+            List<string> keys = dict.Keys.ToList();
+            List<object> values = dict.Values.ToList();
+            int originalKeyCount = keys.Count;
+            
             if ((startingParamsFoldout = EditorGUILayout.Foldout(startingParamsFoldout, "Starting Parameters")))
             {
                 Rect controlRect;
-                for (int i = 0; i < keys.Count; i++)
+
+                List<string> keysToRemove = new List<string>();
+                List<object> valuesToRemove = new List<object>();
+
+                for (int i = 0; i < dict.Keys.Count; i++)
                 {
                     controlRect = EditorGUILayout.GetControlRect(false);
                     Rect keyRect = new Rect(controlRect.position, new Vector2(controlRect.size.x / 2, controlRect.size.y));
                     Rect valueRect = new Rect(new Vector2(controlRect.position.x + controlRect.size.x / 2, controlRect.position.y),
                                               new Vector2(controlRect.size.x / 2 - 25, controlRect.size.y));
-                    Rect removeRect = new Rect(new Vector2(controlRect.position.x + controlRect.size.x - 25, controlRect.position.y),
-                                            new Vector2(25, controlRect.size.y));
+                    Rect removeRect = new Rect(new Vector2(controlRect.position.x + controlRect.size.x - 20, controlRect.position.y),
+                                            new Vector2(20, controlRect.size.y));
                     string newKey = EditorGUI.TextField(keyRect, keys[i]);
                     //Make sure key is unique.
                     if (newKey != keys[i])
@@ -80,75 +96,95 @@ namespace LSystem
                         {
                             if (keys[j] == newKey && i != j)
                             {
-                                Guid g = Guid.NewGuid();
-                                keys[j] = Convert.ToBase64String(g.ToByteArray()).Replace("=", "").Replace("/", "").Replace("+", "");
+                                keys[j] = GenerateGUIDString(10);
                             }
                         }
-
                     }
-                    keys[i] = newKey;
 
+                    keys[i] = newKey;
                     values[i] = DrawObject(valueRect, values[i]);
+
                     if (!EditorGUI.Toggle(removeRect, true))
                     {
-                        keys.RemoveAt(i);
-                        values.RemoveAt(i);
+                        keysToRemove.Add(keys[i]);
+                        valuesToRemove.Add(values[i]);
                     }
                 }
+                foreach (string s in keysToRemove) keys.Remove(s);
+                foreach (object o in valuesToRemove) values.Remove(o);
+
                 controlRect = EditorGUILayout.GetControlRect(false);
-                startingParamAddSelectedIndex = EditorGUI.Popup(controlRect, startingParamAddSelectedIndex,
+                Rect popupRect = new Rect(controlRect.position, new Vector2(controlRect.size.x / 4 * 3, controlRect.size.y));
+                Rect addRect = new Rect(new Vector2(controlRect.position.x + controlRect.size.x / 4 * 3, controlRect.position.y),
+                                          new Vector2(controlRect.size.x / 4, controlRect.size.y));
+                startingParamAddSelectedIndex = EditorGUI.Popup(popupRect, startingParamAddSelectedIndex,
                                                          new string[] { "Integer", "Float", "Boolean","Vector2",
                                                                        "Vector3","Vector4","AnimationCurve", "Color" });
-                if (GUILayout.Button("Add"))
+                if (GUI.Button(addRect, "Add"))
                 {
                     switch (startingParamAddSelectedIndex)
                     {
                         case 0:
                             int intValue = 0;
                             values.Add(intValue);
+                            keys.Add(GenerateGUIDString(10));
                             break;
                         case 1:
                             float floatVlaue = 0f;
                             values.Add(floatVlaue);
+                            keys.Add(GenerateGUIDString(10));
                             break;
                         case 2:
                             bool boolValue = false;
                             values.Add(boolValue);
+                            keys.Add(GenerateGUIDString(10));
                             break;
                         case 3:
                             Vector2 vec2Value = Vector2.zero;
                             values.Add(vec2Value);
+                            keys.Add(GenerateGUIDString(10));
                             break;
                         case 4:
                             Vector3 vec3Value = Vector3.zero;
                             values.Add(vec3Value);
+                            keys.Add(GenerateGUIDString(10));
                             break;
                         case 5:
                             Vector4 vec4Value = Vector4.zero;
                             values.Add(vec4Value);
+                            keys.Add(GenerateGUIDString(10));
                             break;
                         case 6:
                             AnimationCurve curveValue = new AnimationCurve();
                             values.Add(curveValue);
+                            keys.Add(GenerateGUIDString(10));
                             break;
                         case 7:
                             Color colorValue = Color.white;
                             values.Add(colorValue);
+                            keys.Add(GenerateGUIDString(10));
                             break;
                         default:
-                            //default value to avoid index mismatch
-                            int value = 0;
-                            values.Add(value);
-                            Debug.LogError("starting param popup index is not valid");
+                            Debug.LogError("starting parameter popup index is not valid.");
                             break;
                     }
-
-                    //to avoid duplicate keys
-                    Guid g = Guid.NewGuid();
-                    keys.Add(Convert.ToBase64String(g.ToByteArray()).Replace("=", "").Replace("/", "").Replace("+", ""));
-
-
+                    
                 } //Add Button
+                EditorGUILayout.Space();
+
+                Dictionary<string, object> returnDict = new Dictionary<string, object>();
+                for(int i = 0; i < keys.Count; i++)
+                {
+                 
+                    returnDict.Add(keys[i], values[i]);
+                }
+                if (originalKeyCount != keys.Count)
+                {
+                    Undo.RecordObject(target, "Starting Parameters Modified");
+                    //Undo.RecordObject(((Seed)target).StartingParameters.StoreDictionary, "Starting Parameters Modified");
+                }
+
+                ((Seed)target).StartingParameters.StoreDictionary = returnDict;
             }
         }
 
@@ -160,7 +196,7 @@ namespace LSystem
 
             if (values.Count != keys.Count)
             {
-                Debug.LogError("Rules value count not equal to key count!");
+                Debug.LogError("RuleSet value count (" + values.Count + ") not equal to key count(" + keys.Count + ")");
                 keys.Clear();
                 values.Clear();
             }
@@ -176,6 +212,7 @@ namespace LSystem
                                               new Vector2(controlRect.size.x / 2 - 25, controlRect.size.y));
                     Rect removeRect = new Rect(new Vector2(controlRect.position.x + controlRect.size.x - 25, controlRect.position.y),
                                             new Vector2(25, controlRect.size.y));
+
                     string newKeyStr = EditorGUI.TextField(keyRect, "" + keys[i]);
                     char newKey = (char)33;
                     if(newKeyStr.Length > 0) newKey = newKeyStr.ToCharArray()[0];
@@ -206,8 +243,11 @@ namespace LSystem
                         values.RemoveAt(i);
                     }
                 }
-           
-                if (GUILayout.Button("Add"))
+
+                controlRect = EditorGUILayout.GetControlRect(false);
+                Rect addRect = new Rect(new Vector2(controlRect.position.x + controlRect.size.x / 4 * 3, controlRect.position.y), 
+                    new Vector2(controlRect.size.x / 4, controlRect.size.y));
+                if (GUI.Button(addRect,"Add"))
                 {
                     //to avoid duplicate keys
                     char newKey = (char)33;
@@ -219,7 +259,8 @@ namespace LSystem
                     newKey = (char)++max;
                     keys.Add(newKey);
                     values.Add("");
-                } //Add Button
+                } //Add Buttonp            
+                EditorGUILayout.Space();
             }
 
         }
@@ -232,12 +273,12 @@ namespace LSystem
 
             if (values.Count != keys.Count)
             {
-                Debug.LogError("Implementations value count not equal to key count!");
+                Debug.LogError("Implementations value count (" + values.Count + ") not equal to key count(" + keys.Count + ")");
                 keys.Clear();
                 values.Clear();
             }
 
-            if ((implementationFoldout = EditorGUILayout.Foldout(implementationFoldout, "Implementation")))
+            if ((implementationFoldout = EditorGUILayout.Foldout(implementationFoldout, "Implementations")))
             {
                 Rect controlRect;
                 for (int i = 0; i < keys.Count; i++)
@@ -287,8 +328,9 @@ namespace LSystem
                 }
 
                 DrawNewImplementations(keys, values, allPaths);
-                EditorGUILayout.Space();
                 DrawExistingImplementations(keys, values, allPaths);
+
+                EditorGUILayout.Space();
             } 
         }
 
@@ -318,9 +360,12 @@ namespace LSystem
 
 
             Rect controlRect = EditorGUILayout.GetControlRect(false);
+            Rect popupRect = new Rect(controlRect.position, new Vector2(controlRect.size.x / 4 * 3, controlRect.size.y));
+            Rect addRect = new Rect(new Vector2(controlRect.position.x + controlRect.size.x / 4 * 3, controlRect.position.y),
+                                      new Vector2(controlRect.size.x / 4, controlRect.size.y));
 
-            implementationAddNewIndex = EditorGUI.Popup(controlRect, "New", implementationAddNewIndex, types.ToArray());
-            if (GUILayout.Button("Add New"))
+            implementationAddNewIndex = EditorGUI.Popup(popupRect, "New", implementationAddNewIndex, types.ToArray());
+            if (GUI.Button(addRect, "Add"))
             {
                 if (implementationAddNewIndex < allModuleTypes.Count)
                 {
@@ -328,8 +373,7 @@ namespace LSystem
                     if (allPaths.Length > 0)
                     {
                         string path = allPaths[0].Remove(0, Application.dataPath.Length + 1);
-                        Guid g = Guid.NewGuid();
-                        string guidStr = Convert.ToBase64String(g.ToByteArray()).Replace("=", "").Replace("/", "").Replace("+", "").Substring(0, 5);
+                        string guidStr = GenerateGUIDString(5);
                         string prefabName = type.Name +"_"+ guidStr;
                         UnityEngine.Object prefab = PrefabUtility.CreateEmptyPrefab("Assets/" + path + "/Modules/Resources/ModulePrefabs/" + prefabName + ".prefab");
                         GameObject go = new GameObject("TempPrefabInstance", type);
@@ -365,10 +409,13 @@ namespace LSystem
             if (names.Count > 0)
             {
                 Rect controlRect = EditorGUILayout.GetControlRect(false);
+                Rect popupRect = new Rect(controlRect.position, new Vector2(controlRect.size.x / 4 * 3, controlRect.size.y));
+                Rect addRect = new Rect(new Vector2(controlRect.position.x + controlRect.size.x / 4 * 3, controlRect.position.y),
+                                          new Vector2(controlRect.size.x / 4, controlRect.size.y));
 
-                implementationAddExistingIndex = EditorGUI.Popup(controlRect, "Existing", implementationAddExistingIndex, names.ToArray());
+                implementationAddExistingIndex = EditorGUI.Popup(popupRect, "Existing", implementationAddExistingIndex, names.ToArray());
 
-                if (GUILayout.Button("Add Existing"))
+                if (GUI.Button(addRect, "Add"))
                 {
                     if (implementationAddExistingIndex < allModuleTypes.Count)
                     {
@@ -390,7 +437,7 @@ namespace LSystem
 
         protected object DrawObject(Rect rect, object objectToDraw)
         {
-            System.Type type = objectToDraw.GetType();
+            Type type = objectToDraw.GetType();
             if (type == typeof(int))
             {
                 return EditorGUI.IntField(rect, (int)objectToDraw);
@@ -434,6 +481,12 @@ namespace LSystem
             }
         }
 
+        protected string GenerateGUIDString(int length)
+        {
+            Guid g = Guid.NewGuid();
+            return Convert.ToBase64String(g.ToByteArray()).Replace("=", "").Replace("/", "").Replace("+", "").Substring(0, length);
+        }
+
         protected List<Type> allModuleTypes= null;
 
         protected static bool startingParamsFoldout;
@@ -448,6 +501,11 @@ namespace LSystem
         protected int implementationAddExistingIndex;
 
         protected SerializedProperty serIsRoot;
+        protected SerializedProperty setInheritHeading;
         protected SerializedProperty serAxiom;
+
+        protected SerializedProperty serPreGrow;
+        protected SerializedProperty serPreGrowIterations;
+        protected SerializedProperty serIterativeGrowth;
     }
 }

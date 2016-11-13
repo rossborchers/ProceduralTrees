@@ -24,8 +24,10 @@ public class SerializableDictionary<TKey, TValue> : ISerializationCallbackReceiv
 
     public IEqualityComparer<TKey> Comparer { get { return dictionary.Comparer; }  private set{}}
 
-    //Dictionary emulation 
+    [SerializeField]
+    protected bool serialized;
 
+    //Dictionary emulation 
     public SerializableDictionary()
     {
 
@@ -68,40 +70,43 @@ public class SerializableDictionary<TKey, TValue> : ISerializationCallbackReceiv
         return new SerializableDictionaryEnum(dictionary);
     }
 
+    public void Clear()
+    {
+        dictionary.Clear();
+        KeyList.Clear();
+        valueList.Clear();
+    }
+
     public class SerializableDictionaryEnum : IEnumerator
     {
         public SerializableDictionaryEnum(Dictionary<TKey, TValue> dictionary)
         {
             this.dictionary = dictionary;
+            this.enumerator = dictionary.GetEnumerator();
         }
 
         Dictionary<TKey, TValue> dictionary;
+        Dictionary<TKey, TValue>.Enumerator enumerator;
 
-        int position = -1;
-
-        public object Current
+        object IEnumerator.Current
         {
             get
             {
-                throw new NotImplementedException();
+                return enumerator.Current;
             }
         }
 
         public bool MoveNext()
         {
-            position++;
-            return position < dictionary.Count;
+            return enumerator.MoveNext();
         }
 
         public void Reset()
         {
-            position = -1;
+            enumerator = dictionary.GetEnumerator();
         }
     }
-
-    //Serialization
-    private bool serialized;
-
+    
     public void OnBeforeSerialize()
     {
         if (serialized) return;
@@ -119,19 +124,39 @@ public class SerializableDictionary<TKey, TValue> : ISerializationCallbackReceiv
     // Load dictionary from lists
     public void OnAfterDeserialize()
     {
-        if (serialized)
+        if (serialized) 
         {
             dictionary.Clear();
+
+
             for (int i = 0; i < keyList.Count; i++)
             {
                 dictionary.Add(keyList[i], valueList[i]);
             }
+
 
             serialized = false;
         }
     }
 
 }
+
+[Serializable]
+public class StringObjectDict : SerializableDictionary<string, object>
+{
+    public StringObjectDict() : base() { }
+    public StringObjectDict(int count, IEqualityComparer<string> comparer) : base(count, comparer) { }
+}
+[Serializable] public class CharGameObjectDict : SerializableDictionary<char, GameObject> { }
+[Serializable] public class CharStringDict : SerializableDictionary<char, string> { }
+[Serializable] public class StringIntDict : SerializableDictionary<string, int> { }
+[Serializable] public class StringFloatDict : SerializableDictionary<string, float> { }
+[Serializable] public class StringBoolDict : SerializableDictionary<string, bool> { }
+[Serializable] public class StringVec2Dict : SerializableDictionary<string, Vector2> { }
+[Serializable] public class StringVec3Dict : SerializableDictionary<string, Vector3> { }
+[Serializable] public class StringVec4Dict : SerializableDictionary<string, Vector4> { }
+[Serializable] public class StringAnimationCurveDict : SerializableDictionary<string, AnimationCurve> { }
+[Serializable] public class StringColorDict : SerializableDictionary<string, Color> { }
 
 
 

@@ -1,9 +1,13 @@
-﻿
+﻿using System.Collections.Generic;
+using UnityEngine;
+
 /// <summary>
 /// Encapsulates string sentence and provides a current index
 /// </summary>
 public class Sentence
 {
+    Stack<int> positionStack = new Stack<int>();
+
     protected int position;
     protected string sentence;
     
@@ -16,7 +20,7 @@ public class Sentence
     public Sentence(string sentence)
     {
         this.sentence = sentence;
-        this.position = 0;
+        this.position = -1;
     }
 
     public Sentence(string sentence, int position)
@@ -69,7 +73,7 @@ public class Sentence
 
     public bool HasNext()
     {
-        return (position < sentence.Length);
+        return (position + 1 < sentence.Length);
     }
 
     public int Position()
@@ -79,24 +83,51 @@ public class Sentence
 
     public char Next()
     {
-        char next = sentence.ToCharArray()[position];
         if (HasNext())
         {
             position++;
         }
-        return next;
+        else if (position < 0) return '\0';
+        return sentence.ToCharArray()[position];
     }
 
-  
-
-    public char PeekNext()
+    public char Current()
     {
-        char next = (char)0;
-        if (position + 1 < sentence.Length)
-        {
-            next = sentence.ToCharArray()[position + 1];
-        }
-        return next;
+        if (position < 0) return '\0';
+        return sentence.ToCharArray()[position];
+    }
+
+    public override string ToString()
+    {
+        return sentence;
+    }
+
+    public void PushPosition()
+    {
+        positionStack.Push(position);
+    }
+
+    public void PopPosition()
+    {
+       position = positionStack.Pop();
+    }
+
+    /// <summary>
+    /// Removes inclusive of pop and push positions. Returns the removed <see cref="Sentence"/> minus pop and push chars.
+    /// </summary>
+    /// <returns> A <see cref="Sentence"/> exclusive of the chars at the pop and push positions.</returns>
+    public Sentence PopPositionAndCut()
+    {
+        int pushState = position;
+        PopPosition();
+        Sentence cut = new Sentence(sentence.Substring(position + 1, pushState - position -1));
+
+        //position is now on new char, or out of bounds if pop was on last char
+        sentence = sentence.Remove(position, pushState - position + 1);
+
+        position--;
+
+        return cut;
     }
 
     public char this[int index]
