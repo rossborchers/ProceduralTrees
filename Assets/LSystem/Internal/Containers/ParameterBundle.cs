@@ -12,7 +12,7 @@ namespace LSystem
     {
         // Unity wont serialize object references as their subclasses, so we serialize them in a temp object
         [Serializable]
-        protected class SerializedObjectStore
+        public class SerializedObjectStore 
         {
             [SerializeField]
             public StringIntDict intValues = new StringIntDict();
@@ -44,7 +44,7 @@ namespace LSystem
             }
         }
 
-        [SerializeField] 
+        [SerializeField]
         SerializedObjectStore store = new SerializedObjectStore();
 
         [SerializeField] protected bool serialized;

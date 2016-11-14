@@ -4,13 +4,17 @@ using System;
 
 namespace LSystem
 {
-  
-
     /// <summary>
     /// Initialize an LSystem.
     /// </summary>
     public class Seed : Module
     {
+        public enum GenMode
+        {
+            PreEdgeRewrite,
+            IterativeNodeRewrite
+        }
+
         public bool IsRoot { get { return isRoot; } private set { isRoot = value; } }
         [SerializeField]
         protected bool isRoot;
@@ -22,13 +26,13 @@ namespace LSystem
         public bool InheritHeading { get { return isRoot; } private set { isRoot = value; } }
         [SerializeField] protected bool inheritHeading;
 
-        public bool PreGrow { get { return preGrow; } private set { preGrow = value; } }
+        public GenMode GenerateMode { get { return generateMode; } private set { generateMode = value; } }
         [SerializeField]
-        protected bool preGrow;
+        protected GenMode generateMode;
 
-        public int PreGrowIterations { get { return preGrowIterations; } private set { preGrowIterations = value; } }
+        public int Iterations { get { return iterations; } private set { iterations = value; } }
         [SerializeField]
-        protected int preGrowIterations;
+        protected int iterations;
 
         public bool IterativeGrowth { get { return iterativeGrowth; } private set { iterativeGrowth = value; } }
         [SerializeField]
@@ -57,22 +61,27 @@ namespace LSystem
         public override void Execute(ParameterBundle bundle)
         {
             Sentence sentence = new Sentence(axiom);
-            if(preGrow)
+            if(generateMode == GenMode.PreEdgeRewrite)
             {
-                for(int i = 0; i < preGrowIterations; i++)
+                //Pre calculate final sentence.
+                for (int i = 0; i < iterations; i++)
                 {
                     sentence = rules.NextGeneration(sentence);
                 }
+                rules.Fertile = false;
+                bundle.SetOrPut("Iterations", 0);
+            }
+            else // if(preGrow == GenMode.IterateNodeRewrite)
+            {
+                rules.Fertile = true;
+                bundle.SetOrPut("Iterations", iterations);
             }
 
-            if (iterativeGrowth) rules.Fertile = true;
-            else rules.Fertile = false;
-
+            bundle.SetOrPut("Generation", 0);
             bundle.SetOrPut("Sentence", sentence);
             bundle.SetOrPut("Implementations", implementations);
             bundle.SetOrPut("RuleSet", rules);
-            bundle.SetOrPut("Generation", 0);
-
+           
             if (!bundle.Exists("Position")) bundle.Put("Position", transform.position);
 
             if (!inheritHeading) bundle.SetOrPut("Heading", transform.up);

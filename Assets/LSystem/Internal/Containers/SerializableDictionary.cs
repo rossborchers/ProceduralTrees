@@ -127,14 +127,10 @@ public class SerializableDictionary<TKey, TValue> : ISerializationCallbackReceiv
         if (serialized) 
         {
             dictionary.Clear();
-
-
             for (int i = 0; i < keyList.Count; i++)
             {
                 dictionary.Add(keyList[i], valueList[i]);
             }
-
-
             serialized = false;
         }
     }

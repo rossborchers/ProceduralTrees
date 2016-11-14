@@ -17,13 +17,13 @@ namespace LSystem
         public abstract void Execute(ParameterBundle bundle);
 
         protected char symbol;
-
         protected bool ethereal;
+        protected Module previous;
 
         public void ProcessNextModule(Sentence sentence, SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle)
         {
             GameObject module;
-            char symbol;
+            char symbol = '\0';
             do
             {
                 if (!sentence.HasNext())
@@ -36,9 +36,18 @@ namespace LSystem
                     }
 
                     int generation;
+                    int iterations;
                     if (bundle.Get("Generation", out generation))
                     {
                         generation++;
+                        if (bundle.Get("Iterations", out iterations))
+                        {
+                            if(generation > iterations)
+                            {
+                                //Max iterations reached.
+                                return;
+                            }
+                        }
                         if (!bundle.Set("Generation", generation))
                         {
                             Debug.LogError("Cannot set 'Generation' parameter in GetAndExecuteModule", gameObject);
@@ -47,10 +56,9 @@ namespace LSystem
                     else Debug.LogError("Cannot get 'Generation' parameter in GetAndExecuteModule", gameObject);
                 }
                 symbol = sentence.Next();
-                if (symbol == '\0') return; //Sentence is empty! Caused if rules do not generate anything from previous
+                if (symbol == '\0') return; //Sentence is empty! Caused if rules do not generate anything from previous 
 
             } while (!implementation.TryGetValue(symbol, out module));
-
             KeyValuePair < GameObject, Sentence > newPair = new KeyValuePair<GameObject, Sentence>(module, sentence);
             ExecuteModule(newPair, bundle, symbol);
         }
@@ -63,9 +71,20 @@ namespace LSystem
             newBundle.SetOrPut("Sentence", moduleSentancePair.Value);
 
             GameObject moduleInstance = Object.Instantiate(moduleSentancePair.Key);
-            if (this.ethereal)moduleInstance.transform.SetParent(transform.parent, true);
-            else moduleInstance.transform.SetParent(transform, true);
             Module module = moduleInstance.GetComponent<Module>();
+            if (this.ethereal)
+            {
+                // Since this module is ethereal we have to set the parent to this modules parent
+                // Note that this behavior is recursive up to the first non ethereal module or null.
+                module.previous = transform.parent.GetComponent<Module>();
+                moduleInstance.transform.SetParent(transform.parent, true);
+            }
+            else
+            {
+                moduleInstance.transform.SetParent(transform, true);
+                module.previous = transform.GetComponent<Module>();
+            }
+            
             module.symbol = symbol;
             module.Execute(newBundle);
         }
@@ -92,18 +111,13 @@ namespace LSystem
             return success;
         }
 
-        public bool GetPositionParameters(ParameterBundle bundle, out int generation, out Vector3 position, out Vector3 heading)
+        public bool GetPositionParameters(ParameterBundle bundle, out int generation, out Vector3 heading)
         {
             bool success = true;
             if (!bundle.Get("Generation", out generation))
             {
                 success = false;
                 Debug.LogError("Default parameter 'Generation' missing.", gameObject);
-            }
-            if (!bundle.Get("Position", out position))
-            {
-                success = false;
-                Debug.LogError("Default parameter 'Position' missing.", gameObject);
             }
             if (!bundle.Get("Heading", out heading))
             {

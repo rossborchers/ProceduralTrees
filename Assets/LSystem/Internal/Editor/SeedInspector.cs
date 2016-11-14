@@ -17,9 +17,8 @@ namespace LSystem
             setInheritHeading = serializedObject.FindProperty("inheritHeading");
             serAxiom = serializedObject.FindProperty("axiom");
 
-            serPreGrow = serializedObject.FindProperty("preGrow");
-            serPreGrowIterations = serializedObject.FindProperty("preGrowIterations");
-            serIterativeGrowth = serializedObject.FindProperty("iterativeGrowth");
+            serGenerateMode = serializedObject.FindProperty("generateMode");
+            serIterations = serializedObject.FindProperty("iterations");
         }
 
         public override void OnInspectorGUI()
@@ -40,38 +39,35 @@ namespace LSystem
 
             EditorGUILayout.Space();
 
-            EditorGUILayout.PropertyField(serPreGrow);
-            if (serPreGrow.boolValue)
-            {
-                EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(serPreGrowIterations);
+            EditorGUILayout.PropertyField(serGenerateMode);
+            EditorGUILayout.PropertyField(serIterations);
            
-                EditorGUI.indentLevel--;
-            }
-            EditorGUILayout.PropertyField(serIterativeGrowth);
-
-
             EditorGUILayout.Space();
 
+            serializedObject.ApplyModifiedProperties();
+
             //Can't multi edit
+            Undo.RecordObject((Seed)target, "Seed Inspector modified");
 
             DrawStartingParams();
 
             DrawRules();
 
             DrawImplementations();
-            EditorGUILayout.Space();
 
-            serializedObject.ApplyModifiedProperties();
+
+            if(PrefabUtility.GetPrefabParent(target) != null)
+            {
+                EditorGUILayout.HelpBox("Unapplied prefab changes will be lost on play or editor close.", MessageType.Warning);
+            }
+            
         }
-
 
         protected void DrawStartingParams()
         {
             Dictionary<string, object> dict = ((Seed)target).StartingParameters.StoreDictionary;
             List<string> keys = dict.Keys.ToList();
             List<object> values = dict.Values.ToList();
-            int originalKeyCount = keys.Count;
             
             if ((startingParamsFoldout = EditorGUILayout.Foldout(startingParamsFoldout, "Starting Parameters")))
             {
@@ -178,12 +174,6 @@ namespace LSystem
                  
                     returnDict.Add(keys[i], values[i]);
                 }
-                if (originalKeyCount != keys.Count)
-                {
-                    Undo.RecordObject(target, "Starting Parameters Modified");
-                    //Undo.RecordObject(((Seed)target).StartingParameters.StoreDictionary, "Starting Parameters Modified");
-                }
-
                 ((Seed)target).StartingParameters.StoreDictionary = returnDict;
             }
         }
@@ -259,7 +249,7 @@ namespace LSystem
                     newKey = (char)++max;
                     keys.Add(newKey);
                     values.Add("");
-                } //Add Buttonp            
+                } //Add Button          
                 EditorGUILayout.Space();
             }
 
@@ -270,6 +260,7 @@ namespace LSystem
             CharGameObjectDict implementations = ((Seed)target).Implementations;
             List<char> keys = implementations.KeyList;
             List<GameObject> values = implementations.ValueList;
+           
 
             if (values.Count != keys.Count)
             {
@@ -375,7 +366,7 @@ namespace LSystem
                         string path = allPaths[0].Remove(0, Application.dataPath.Length + 1);
                         string guidStr = GenerateGUIDString(5);
                         string prefabName = type.Name +"_"+ guidStr;
-                        UnityEngine.Object prefab = PrefabUtility.CreateEmptyPrefab("Assets/" + path + "/Modules/Resources/ModulePrefabs/" + prefabName + ".prefab");
+                        UnityEngine.Object prefab = PrefabUtility.CreateEmptyPrefab("Assets/" + path + "/Resources/ModulePrefabs/" + prefabName + ".prefab");
                         GameObject go = new GameObject("TempPrefabInstance", type);
                         values.Add(PrefabUtility.ReplacePrefab(go, prefab, ReplacePrefabOptions.ConnectToPrefab));
                         DestroyImmediate(go);
@@ -385,11 +376,9 @@ namespace LSystem
             }
         }
 
-
         protected void DrawExistingImplementations(List<char> keys, List<GameObject> values, string[] allPaths)
         {
             // Existing implementation 
-
             List<string> names = new List<string>();
             List<GameObject> prefabs = new List<GameObject>();
             if (allPaths.Length > 0)
@@ -417,16 +406,19 @@ namespace LSystem
 
                 if (GUI.Button(addRect, "Add"))
                 {
-                    if (implementationAddExistingIndex < allModuleTypes.Count)
+                    if (implementationAddExistingIndex < prefabs.Count)
                     {
-                        string name = names[implementationAddExistingIndex];
                         if (allPaths.Length > 0)
                         {
-                            GameObject existing = Resources.Load<GameObject>("ModulePrefabs/" + name);
+                            GameObject existing = prefabs[implementationAddExistingIndex];
                             if (existing != null)
                             {
                                 values.Add(existing);
                                 keys.Add((char)(33 + keys.Count));
+                            }
+                            else
+                            {
+                                Debug.LogWarning("Cannot find " + names[implementationAddExistingIndex]);
                             }
                         }
                     }
@@ -489,14 +481,14 @@ namespace LSystem
 
         protected List<Type> allModuleTypes= null;
 
-        protected static bool startingParamsFoldout;
         protected int startingParamAddSelectedIndex;
 
+        protected static bool startingParamsFoldout;
         protected static bool ruleSetFoldout;
+        protected static bool implementationFoldout;
 
         protected List<KeyValuePair<string, Type>> modules;
 
-        protected static bool implementationFoldout;
         protected int implementationAddNewIndex;
         protected int implementationAddExistingIndex;
 
@@ -504,8 +496,7 @@ namespace LSystem
         protected SerializedProperty setInheritHeading;
         protected SerializedProperty serAxiom;
 
-        protected SerializedProperty serPreGrow;
-        protected SerializedProperty serPreGrowIterations;
-        protected SerializedProperty serIterativeGrowth;
+        protected SerializedProperty serGenerateMode;
+        protected SerializedProperty serIterations;
     }
 }
