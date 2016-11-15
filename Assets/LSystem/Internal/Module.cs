@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using System.Collections;
+using System;
 
 namespace LSystem
 {
@@ -21,24 +22,40 @@ namespace LSystem
         protected Module previous;
         protected bool dead;
 
-        public static int MaximumNewModulesPerFrame{ get; set; }
+        static ModuleSheduler sheduler;
 
-        Queue<IEnumerator> nextModuleProcessors = new Queue<IEnumerator>();
-        public void Update()
+        public void EnqueueProcessNextModule(Transform caller, Sentence sentence, SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle)
         {
+            if(sheduler == null)
+            {
+                sheduler = FindObjectOfType<ModuleSheduler>();
+                if(sheduler == null)
+                {
+                    GameObject shedulerObject = new GameObject("LSystemModuleSheduler");
+                    sheduler = shedulerObject.AddComponent<ModuleSheduler>();
+                    shedulerObject.hideFlags = HideFlags.HideAndDontSave;
+                }
+            }
 
+            Module previous;
+            if (this.ethereal)
+            {
+                // Since this module is ethereal we have to set the parent to this modules parent
+                // Note that this behavior is recursive up to the first non ethereal module or null.
+                previous = caller.parent.GetComponent<Module>();
+            }
+            else
+            {
+                previous = caller.GetComponent<Module>();
+            }
+
+            sheduler.EnqueueProcessNextModule(ProcessNextModule(previous, sentence, implementation, rules, bundle));
         }
 
-        public void RegisterrocessNextModule(Sentence sentence, SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle)
-        {
-            ProcessNextModule(sentence, implementation, rules, bundle);
-        }
-
-        void ProcessNextModule(Sentence sentence, SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle)
+        IEnumerator ProcessNextModule(Module previous, Sentence sentence, SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle)
         {
             Profiler.BeginSample("LSystem.Module.ProcessNextModule");
-
-            if (dead) return;
+            if (dead) yield break;
 
             GameObject module;
             char symbol = '\0';
@@ -63,7 +80,7 @@ namespace LSystem
                             if (generation > iterations)
                             {
                                 //Max iterations reached.
-                                return;
+                                yield break; 
                             }
                         }
                         if (!bundle.Set("Generation", generation))
@@ -74,19 +91,21 @@ namespace LSystem
                     else Debug.LogError("Cannot get 'Generation' parameter in GetAndExecuteModule", gameObject);
                 }
                 symbol = sentence.Next();
-                if (symbol == '\0') return; //Sentence is empty! Caused if rules do not generate anything from previous 
+                if (symbol == '\0') yield break; //Sentence is empty! Caused if rules do not generate anything from previous 
 
             } while (!implementation.TryGetValue(symbol, out module));
             KeyValuePair<GameObject, Sentence> newPair = new KeyValuePair<GameObject, Sentence>(module, sentence);
 
             Profiler.EndSample();
 
-            ExecuteModule(newPair, bundle, symbol);
+            ExecuteModule(previous, newPair, bundle, symbol);
         }
 
 
-        public void ExecuteModule(KeyValuePair<GameObject, Sentence> moduleSentancePair, ParameterBundle bundle, char symbol)
+        public void ExecuteModule(Module previous, KeyValuePair<GameObject, Sentence> moduleSentancePair, ParameterBundle bundle, char symbol)
         {
+            if(previous == null) return; // if object is destoyed externally
+
             Profiler.BeginSample("LSystem.Module.ExecuteModule");
 
             if (moduleSentancePair.Key == null) return;
@@ -94,21 +113,13 @@ namespace LSystem
             ParameterBundle newBundle = new ParameterBundle(bundle);
             newBundle.SetOrPut("Sentence", moduleSentancePair.Value);
 
-            GameObject moduleInstance = Object.Instantiate(moduleSentancePair.Key);
+            GameObject moduleInstance = UnityEngine.Object.Instantiate(moduleSentancePair.Key);
             Module module = moduleInstance.GetComponent<Module>();
-            if (this.ethereal)
-            {
-                // Since this module is ethereal we have to set the parent to this modules parent
-                // Note that this behavior is recursive up to the first non ethereal module or null.
-                module.previous = transform.parent.GetComponent<Module>();
-                moduleInstance.transform.SetParent(transform.parent, true);
-            }
-            else
-            {
-                moduleInstance.transform.SetParent(transform, true);
-                module.previous = transform.GetComponent<Module>();
-            }
-            
+
+
+            module.previous = previous;
+            moduleInstance.transform.SetParent(previous.transform, true);
+        
             module.symbol = symbol;
 
             Profiler.EndSample();

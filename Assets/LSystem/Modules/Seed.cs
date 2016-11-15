@@ -38,6 +38,9 @@ namespace LSystem
         [SerializeField]
         protected bool iterativeGrowth = true;
 
+        [SerializeField]
+        protected bool bakePrefab = false;
+
         public ParameterBundle StartingParameters { get { return startingParameters; } private set { } }
         [SerializeField] protected ParameterBundle startingParameters = new ParameterBundle();
 
@@ -55,6 +58,11 @@ namespace LSystem
             if (isRoot)
             {
                 Execute(startingParameters);
+            }
+
+            if(bakePrefab)
+            {
+
             }
         }
 
@@ -93,7 +101,7 @@ namespace LSystem
             if (!executed)
             {
                 executed = true;
-                RegisterrocessNextModule(sentence, implementations, rules, bundle);
+                EnqueueProcessNextModule(transform, sentence, implementations, rules, bundle);
             }
             Profiler.EndSample();
         }

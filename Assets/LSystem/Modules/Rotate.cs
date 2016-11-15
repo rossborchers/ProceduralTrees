@@ -11,9 +11,6 @@ namespace LSystem
         [SerializeField]
         protected Vector3 eulerAnglesMin;
 
-        [SerializeField]
-        protected bool clearPrevious = false;
-
         Rotate() :base()
         {
             ethereal = true;
@@ -30,11 +27,6 @@ namespace LSystem
             Vector3 heading;
             if (bundle.Get("Heading", out heading))
             {
-                if (clearPrevious)
-                {
-                    heading = Vector3.up;
-                }
-
                 heading = Quaternion.Euler(new Vector3(Random.Range(eulerAnglesMin.x, eulerAnglesMax.x),
                                                                  Random.Range(eulerAnglesMin.y, eulerAnglesMax.y),
                                                                  Random.Range(eulerAnglesMin.z, eulerAnglesMax.z))) * heading;
@@ -46,7 +38,7 @@ namespace LSystem
             }
             if(!fatal)
             {
-                RegisterrocessNextModule(sentence, implementations, rules, bundle);
+                EnqueueProcessNextModule(transform, sentence, implementations, rules, bundle);
             }
             Destroy(gameObject);
         }

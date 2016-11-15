@@ -157,7 +157,7 @@ namespace LSystem
 
             if (setStaticOnComplete) gameObject.isStatic = true;
 
-            RegisterrocessNextModule(sentence, implementations, rules, bundle);
+            EnqueueProcessNextModule(transform, sentence, implementations, rules, bundle);
         }
 
         /// <summary>
