@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
-
+using System.Collections;
 
 namespace LSystem
 {
@@ -19,9 +19,27 @@ namespace LSystem
         protected char symbol;
         protected bool ethereal;
         protected Module previous;
+        protected bool dead;
 
-        public void ProcessNextModule(Sentence sentence, SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle)
+        public static int MaximumNewModulesPerFrame{ get; set; }
+
+        Queue<IEnumerator> nextModuleProcessors = new Queue<IEnumerator>();
+        public void Update()
         {
+
+        }
+
+        public void RegisterrocessNextModule(Sentence sentence, SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle)
+        {
+            ProcessNextModule(sentence, implementation, rules, bundle);
+        }
+
+        void ProcessNextModule(Sentence sentence, SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle)
+        {
+            Profiler.BeginSample("LSystem.Module.ProcessNextModule");
+
+            if (dead) return;
+
             GameObject module;
             char symbol = '\0';
             do
@@ -42,7 +60,7 @@ namespace LSystem
                         generation++;
                         if (bundle.Get("Iterations", out iterations))
                         {
-                            if(generation > iterations)
+                            if (generation > iterations)
                             {
                                 //Max iterations reached.
                                 return;
@@ -59,12 +77,18 @@ namespace LSystem
                 if (symbol == '\0') return; //Sentence is empty! Caused if rules do not generate anything from previous 
 
             } while (!implementation.TryGetValue(symbol, out module));
-            KeyValuePair < GameObject, Sentence > newPair = new KeyValuePair<GameObject, Sentence>(module, sentence);
+            KeyValuePair<GameObject, Sentence> newPair = new KeyValuePair<GameObject, Sentence>(module, sentence);
+
+            Profiler.EndSample();
+
             ExecuteModule(newPair, bundle, symbol);
         }
 
+
         public void ExecuteModule(KeyValuePair<GameObject, Sentence> moduleSentancePair, ParameterBundle bundle, char symbol)
         {
+            Profiler.BeginSample("LSystem.Module.ExecuteModule");
+
             if (moduleSentancePair.Key == null) return;
 
             ParameterBundle newBundle = new ParameterBundle(bundle);
@@ -86,7 +110,20 @@ namespace LSystem
             }
             
             module.symbol = symbol;
+
+            Profiler.EndSample();
+
             module.Execute(newBundle);
+        }
+
+        protected void AssignPrevious(Module next, Module previous)
+        {
+            next.previous = previous;
+        }
+
+        protected void Kill(Module toKill)
+        {
+            toKill.dead = true;
         }
 
         // Retrial for parameters common to most LSystems are wrapped here for convenience.

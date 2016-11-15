@@ -11,6 +11,9 @@ namespace LSystem
         [SerializeField]
         protected Vector3 eulerAnglesMin;
 
+        [SerializeField]
+        protected bool clearPrevious = false;
+
         Rotate() :base()
         {
             ethereal = true;
@@ -22,13 +25,16 @@ namespace LSystem
             Sentence sentence;
             CharGameObjectDict implementations;
             RuleSet rules;
-            if (!bundle.Get("Sentence", out sentence)) { fatal = true; Debug.LogError("Default parameter 'Sentence' missing.", gameObject); }
-            if (!bundle.Get("Implementations", out implementations)) { fatal = true; Debug.LogError("Default parameter 'Implementations' missing.", gameObject); }
-            if (!bundle.Get("RuleSet", out rules)) { fatal = true; Debug.LogError("Default parameter 'RuleSet' missing.", gameObject); }
+            if (!GetCoreParameters(bundle, out sentence, out implementations, out rules)) fatal = true;
 
             Vector3 heading;
             if (bundle.Get("Heading", out heading))
             {
+                if (clearPrevious)
+                {
+                    heading = Vector3.up;
+                }
+
                 heading = Quaternion.Euler(new Vector3(Random.Range(eulerAnglesMin.x, eulerAnglesMax.x),
                                                                  Random.Range(eulerAnglesMin.y, eulerAnglesMax.y),
                                                                  Random.Range(eulerAnglesMin.z, eulerAnglesMax.z))) * heading;
@@ -40,7 +46,7 @@ namespace LSystem
             }
             if(!fatal)
             {
-                ProcessNextModule(sentence, implementations, rules, bundle);
+                RegisterrocessNextModule(sentence, implementations, rules, bundle);
             }
             Destroy(gameObject);
         }

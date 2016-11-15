@@ -60,6 +60,8 @@ namespace LSystem
 
         public override void Execute(ParameterBundle bundle)
         {
+            Profiler.BeginSample("LSystem.Seed.Execute");
+
             Sentence sentence = new Sentence(axiom);
             if(generateMode == GenMode.PreEdgeRewrite)
             {
@@ -91,8 +93,9 @@ namespace LSystem
             if (!executed)
             {
                 executed = true;
-                ProcessNextModule(sentence, implementations, rules, bundle);
+                RegisterrocessNextModule(sentence, implementations, rules, bundle);
             }
+            Profiler.EndSample();
         }
     }
 }

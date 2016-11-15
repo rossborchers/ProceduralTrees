@@ -14,12 +14,12 @@ namespace LSystem
         [SerializeField]
         protected float startLength = 1f;
         [SerializeField]
-        protected float lengthChangeRate = 1f;
+        protected float lengthChangeCoefficient = 1f;
 
         [SerializeField]
         protected float startRadius = 1f;
         [SerializeField]
-        protected float radiusChangeRate = 1f;
+        protected float radiusChangeCoefficient = 1f;
 
         [SerializeField]
         protected float topRadiusMultiplier = 1f;
@@ -30,12 +30,15 @@ namespace LSystem
         [SerializeField]
         protected float startGrowSpeed = 4f;
         [SerializeField]
-        protected float growSpeedChangeRate = 1f;
+        protected float growSpeedChangeCoefficient = 1f;
 
         [SerializeField]
         protected float startFaceNum = 6f;
         [SerializeField]
-        protected float faceNumChangeRate = 0.8f;
+        protected float faceNumChangeCoefficient = 0.8f;
+
+        [SerializeField]
+        protected GameObject endObject = null;
 
         [SerializeField]
         protected Material branchMaterial;
@@ -45,7 +48,7 @@ namespace LSystem
 
         protected delegate void GrowLoopCallback(float radius);
         protected MeshFilter filter;
-        protected MeshRenderer renderer;
+        protected MeshRenderer branchRenderer;
 
         protected float bottomRadius;
         protected float topRadius = 0;
@@ -70,9 +73,15 @@ namespace LSystem
              || !GetPositionParameters(bundle, out generation, out heading)) yield break;
 
             // Setup Renderer
-            filter = gameObject.AddComponent<MeshFilter>();
-            renderer = gameObject.AddComponent<MeshRenderer>();
-            renderer.material = branchMaterial;
+            if ((filter = gameObject.GetComponent<MeshFilter>()) == null)
+            {
+                filter = gameObject.AddComponent<MeshFilter>();
+            }
+            if ((branchRenderer = gameObject.GetComponent<MeshRenderer>()) == null)
+            {
+                branchRenderer = gameObject.AddComponent<MeshRenderer>();
+            }
+            branchRenderer.material = branchMaterial;
 
             //Match start position to previous position. As growth progresses position will be offset
             //While heading stays the same
@@ -98,26 +107,49 @@ namespace LSystem
             // Note that future emergence is killed here.
             if (length < lengthCutoff || radius < radiusCutoff) yield break;
 
+            if (endObject != null)
+            { 
+                  endObject = (GameObject)Instantiate(endObject, transform);
+                  Module mod = endObject.GetComponent<Module>();
+                  if (mod != null)
+                  {
+                    AssignPrevious(mod, this);
+                    if (mod.GetType() != typeof(Seed))
+                    {
+                        Kill(mod);
+                        mod.Execute(bundle);
+                    }
+                  }
+                  endObject.transform.up = heading;
+            }
+
             // Update mesh and extend transform towards final position
             float distance = Vector3.Distance(transform.position, previous.transform.position);
             while(distance < length)
             {
                 float completionRatio = distance / length;
-                transform.position += heading * Mathf.Min(heading.magnitude * Time.deltaTime * Mathf.Lerp(startGrowSpeed, growSpeed * growSpeedChangeRate, completionRatio), length);
+                transform.position += heading * Mathf.Min(heading.magnitude * Time.deltaTime * Mathf.Lerp(startGrowSpeed, growSpeed * growSpeedChangeCoefficient, completionRatio), length);
                 distance = Vector3.Distance(transform.position, previous.transform.position);
 
                 bottomRadius = Mathf.Lerp(0, startRadius, completionRatio);
                 filter = UpdateBranch(Vector3.up * -distance, distance, bottomRadius * bottomRadiusMultiplier, topRadius * topRadiusMultiplier, Mathf.Max(2,(int)(faces)), filter);
                 if(growLoopCallback != null) growLoopCallback(bottomRadius);
+
+                if(endObject != null)
+                {
+                      endObject.transform.position = transform.position;
+                      endObject.transform.up = heading;
+                }
+               
                 yield return null;
             }
             bottomRadius = startRadius;
 
             // Update parameters for next branch
-            bundle.SetOrPut("BranchLength", length * lengthChangeRate);
-            bundle.SetOrPut("BranchRadius", radius * radiusChangeRate);
-            bundle.SetOrPut("BranchGrowSpeed", growSpeed * growSpeedChangeRate);
-            bundle.SetOrPut("BranchFaceNum", faces * faceNumChangeRate);
+            bundle.SetOrPut("BranchLength", length * lengthChangeCoefficient);
+            bundle.SetOrPut("BranchRadius", radius * radiusChangeCoefficient);
+            bundle.SetOrPut("BranchGrowSpeed", growSpeed * growSpeedChangeCoefficient);
+            bundle.SetOrPut("BranchFaceNum", faces * faceNumChangeCoefficient);
 
             // For coordination between branches
             growLoopCallback = NextBranchGrowLoopCallback;
@@ -125,7 +157,7 @@ namespace LSystem
 
             if (setStaticOnComplete) gameObject.isStatic = true;
 
-            ProcessNextModule(sentence, implementations, rules, bundle);
+            RegisterrocessNextModule(sentence, implementations, rules, bundle);
         }
 
         /// <summary>

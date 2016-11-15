@@ -33,8 +33,8 @@ namespace LSystem
 
             Sentence split = sentence.PopPositionAndCut();
 
-            ProcessNextModule(sentence, implementations, rules, bundle);
-            ProcessNextModule(split, implementations, rules, bundle);
+            RegisterrocessNextModule(sentence, implementations, rules, bundle);
+            RegisterrocessNextModule(split, implementations, rules, bundle);
             Destroy(gameObject);
         }
     }
