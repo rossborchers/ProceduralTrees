@@ -25,10 +25,10 @@ namespace LSystem
         [Tooltip("Initial character to kick off LSystem.")]
         protected string axiom;
 
-        // This is redundant.
         [HideInInspector]
         public bool InheritHeading { get { return isRoot; } private set { isRoot = value; } }
         [SerializeField]
+        [Tooltip("Does the LSystem Inherit the previous systems heading?")]
         protected bool inheritHeading;
 
         public GenMode GenerateMode { get { return generateMode; } private set { generateMode = value; } }
