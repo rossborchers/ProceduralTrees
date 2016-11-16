@@ -19,21 +19,27 @@ namespace LSystem
 
         public abstract void Bake(ParameterBundle bundle);
 
+        [HideInInspector]
         [SerializeField]
         protected char symbol;
 
+        [HideInInspector]
         [SerializeField]
         protected bool ethereal;
 
+        [HideInInspector]
         [SerializeField]
         protected Module previous;
 
+        [HideInInspector]
         [SerializeField]
         protected bool dead;
 
+        [HideInInspector]
         [SerializeField]
         protected bool baked;
 
+        [HideInInspector]
         [SerializeField]
         protected string prefabIdentifier = null;
 
@@ -156,7 +162,6 @@ namespace LSystem
             GameObject moduleInstance = UnityEngine.Object.Instantiate(moduleSentancePair.Key);
             Module module = moduleInstance.GetComponent<Module>();
 
-
             module.previous = previous;
             moduleInstance.transform.SetParent(previous.transform, true);
         
@@ -168,11 +173,8 @@ namespace LSystem
 
             Profiler.EndSample();
 
-            if (baked)
-            {
-                if (prefabIdentifier == null) prefabIdentifier = gameObject.name;
-                module.Bake(newBundle);
-            }
+            if (prefabIdentifier != null) module.prefabIdentifier = prefabIdentifier;
+            if (baked) module.Bake(newBundle);
             else module.Execute(newBundle);
         }
 
@@ -180,7 +182,6 @@ namespace LSystem
         {
             next.previous = previous;
         }
-
       
 
         protected void SetPrefabIdentifier(Module module)

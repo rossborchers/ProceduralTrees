@@ -122,7 +122,6 @@ namespace LSystem
                     if (mod.GetType() != typeof(Seed))
                     {
                         Kill(mod);
-
                         SetPrefabIdentifier(mod); 
                         mod.Bake(bundle);
                     }
@@ -152,7 +151,7 @@ namespace LSystem
             {
                 float distance = Vector3.Distance(transform.position, previous.transform.position);
                 bottomRadius = startRadius;
-                UpdateBranch(Vector3.up * -distance, distance, bottomRadius * bottomRadiusMultiplier, topRadius * topRadiusMultiplier, Mathf.Max(2, (int)(faces)));
+                UpdateBranch(Vector3.up * -distance, distance, bottomRadius * bottomRadiusMultiplier, radius * radiusChangeCoefficient, Mathf.Max(2, (int)(faces)));
             }
 
             if (endObject != null)

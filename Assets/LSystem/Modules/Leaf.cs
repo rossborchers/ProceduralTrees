@@ -1,9 +1,11 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor;
 
 namespace LSystem
 {
+    [ExecuteInEditMode]
     public class Leaf : Module
     {
         [SerializeField]
@@ -19,13 +21,16 @@ namespace LSystem
         protected float startLateralSize = 1;
 
         [SerializeField]
+        protected Vector3 offset = Vector3.zero;
+
+        [SerializeField]
         protected float startGrowTime = 1;
 
         [SerializeField]
         protected AnimationCurve contour = new AnimationCurve(new Keyframe[] { new Keyframe(0, 1, 0, 0), new Keyframe(1, 1, 0, 0) });
 
         [SerializeField]
-        protected AnimationCurve medialRotation = new AnimationCurve( new Keyframe[]{new Keyframe(0,0,0,0), new Keyframe(1,0, 0, 0)});
+        protected AnimationCurve medialRotation = new AnimationCurve(new Keyframe[] { new Keyframe(0, 0, 0, 0), new Keyframe(1, 0, 0, 0) });
 
         [SerializeField]
         protected AnimationCurve lateralRotation = new AnimationCurve(new Keyframe[] { new Keyframe(0, 0, 0, 0), new Keyframe(1, 0, 0, 0) });
@@ -50,6 +55,10 @@ namespace LSystem
 
         [SerializeField]
         protected Material leafMaterial;
+
+        [SerializeField]
+        [Range(0,1)]
+        protected float editorTimeValue = 1f;
 
         protected MeshFilter filter;
         protected MeshRenderer leafFenderer;
@@ -90,7 +99,7 @@ namespace LSystem
             }
             else
             {
-                UpdateMesh( 1, Vector3.zero);
+                UpdateMesh( 1, offset);
                 bakedPrefabFilters.Add(prefabIdentifier, filter);
             }
             if (setStaticOnComplete) gameObject.isStatic = true;
@@ -145,7 +154,7 @@ namespace LSystem
             while (time < startGrowTime)
             {
                 time += Time.deltaTime;
-                UpdateMesh(time / startGrowTime, Vector3.zero);
+                UpdateMesh(time / startGrowTime, offset);
                 yield return null;
             }
 
@@ -161,12 +170,31 @@ namespace LSystem
             {
                 while(true)
                 {
-                    UpdateMesh(1f, Vector3.zero);
+                    UpdateMesh(1f, offset);
                     yield return null;
                 }
             }
         }
 
+#if UNITY_EDITOR
+        // Called in edit mode
+        protected void Update()
+        {
+            if ((filter = gameObject.GetComponent<MeshFilter>()) == null)
+            {
+                filter = gameObject.AddComponent<MeshFilter>();
+            }
+            if ((leafFenderer = gameObject.GetComponent<MeshRenderer>()) == null)
+            {
+                leafFenderer = gameObject.AddComponent<MeshRenderer>();
+            }
+            leafFenderer.material = leafMaterial;
+
+            if (Application.isPlaying) return;
+
+            UpdateMesh(editorTimeValue, offset);
+        }
+#endif
         void UpdateMesh(float normalizedTime, Vector3 offset)
         {
             /*  
@@ -203,7 +231,16 @@ namespace LSystem
                 return;
             }
 
-            Mesh mesh = filter.mesh;
+            Mesh mesh;
+            if (!Application.isPlaying)
+            {
+                if(filter.sharedMesh == null)
+                {
+                    filter.sharedMesh = new Mesh();
+                }
+                mesh = filter.sharedMesh;
+            }
+            else mesh = filter.mesh;
             mesh.Clear();
 
             float localMedSize = startMedialSize * normalizedTime;
@@ -231,7 +268,7 @@ namespace LSystem
 
             Vector3 segmentCenter = Vector3.zero;
             Vector3 lastCenter = segmentCenter;
-
+           
             int indexPos = 0;
             int topIndexCutoff = vertexNumLat * (vertexNumMed - 1);
 

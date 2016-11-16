@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using System;
+using System.Collections;
 
 namespace LSystem
 {
@@ -50,6 +51,14 @@ namespace LSystem
         [SerializeField]
         protected float bakedScaleMin = 1;
 
+        public bool BakedScaleOnSpawn { get { return bakedScaleOnSpawn; } private set { bakedScaleOnSpawn = value; } }
+        [SerializeField]
+        protected bool bakedScaleOnSpawn = true;
+
+        public float BakedScaleTime { get { return bakedScaleTime; } private set { bakedScaleTime = value; } }
+        [SerializeField]
+        protected float bakedScaleTime = 1f;
+
         public ParameterBundle StartingParameters { get { return startingParameters; } private set { } }
         [SerializeField] protected ParameterBundle startingParameters = new ParameterBundle();
 
@@ -77,45 +86,85 @@ namespace LSystem
         {
             if (dead) return;
 
-            //TODO: this has the meshes so they will still be destroyed when this is!
             Vector3 heading;
             if (!bundle.Get("Heading", out heading))
             {
                 heading = Vector3.up;
             }
 
-           
+            Vector3 position = transform.position; 
+            Transform parent = null;
+            if(previous != null)
+            {
+                position = previous.transform.position;
+                parent = previous.transform;
+            }
+
+            Quaternion rotation = Quaternion.Euler(UnityEngine.Random.Range(bakedRotationMin.x, bakedRotationMax.x),
+                UnityEngine.Random.Range(bakedRotationMin.y, bakedRotationMax.y),
+                UnityEngine.Random.Range(bakedRotationMin.z, bakedRotationMax.z));
+
+            float s = UnityEngine.Random.Range(bakedScaleMin, bakedScaleMax);
+            Vector3 scale = new Vector3(s, s, s);
 
             // try get existing instance
             GameObject prototypeInstance;
+            GameObject instance;
             if (bakedProtoypes.TryGetValue(prefabIdentifier, out prototypeInstance))
             {
-                GameObject instance = (GameObject)Instantiate(prototypeInstance, previous.transform.position, Quaternion.identity, previous.transform);
+                if (parent == null) parent = transform;
+                instance = (GameObject)Instantiate(prototypeInstance, position, rotation, parent);
+                instance.transform.localScale = scale;
+                instance.name = "Instance_"+prefabIdentifier;
 
                 instance.transform.up = heading;
                 instance.SetActive(true);
+
+                if (bakedScaleOnSpawn) StartCoroutine(BakedScale(instance));
             }
             else
             {
                 //TODO: This lags like crazy. Not suitable for complex objects. Move logic to Editor and save as prefab!
                 AnyExecute(bundle); //bake
 
-                //this object contains the original mesh data so it needs to become the prototypical instance. we create a copy of it to continue.
-                //Be free!
-                GameObject instance = (GameObject)Instantiate(gameObject, Vector3.zero, Quaternion.identity);
-               
-
                 transform.position = Vector3.zero;
                 transform.rotation = Quaternion.identity;
                 transform.parent = null;
 
-                gameObject.name = "PrototypeInstance_" + prefabIdentifier;
+                // The current object contains the original mesh data so it needs to become the prototypical instance. we create a copy of it to continue.
+                instance = (GameObject)Instantiate(gameObject, position, rotation, parent);
+                instance.transform.localScale = scale;
+                instance.name = "InitialInstance_" + prefabIdentifier;
+
+                if (bakedScaleOnSpawn) StartCoroutine(BakedScale(instance));
+
+                //Kill initial instance module since its already generated.
+                Module initialInstanceModule = instance.GetComponent<Module>();
+                if(initialInstanceModule != null) Kill(initialInstanceModule);
+
+                gameObject.name = "Prototype_" + prefabIdentifier;
                 Kill(this); //the prototype must not be able to create new instances(they will do the same... etc)
                 //gameObject.hideFlags = HideFlags.HideInHierarchy;
 
                 bakedProtoypes.Add(prefabIdentifier, gameObject);
                 gameObject.SetActive(false);
             }
+           
+        }
+
+        IEnumerator BakedScale(GameObject instance)
+        {
+            float currentTime = 0f;
+            float endScale = instance.transform.lossyScale.x;
+            while(currentTime < bakedScaleTime)
+            {
+                float currentScale = Mathf.Lerp(0, endScale, currentTime/ bakedScaleTime);
+                instance.transform.localScale = new Vector3(currentScale, currentScale, currentScale);
+                currentTime += Time.deltaTime;
+                yield return null;
+            }
+            Debug.Log(endScale);
+            instance.transform.localScale = new Vector3(endScale, endScale, endScale);
         }
 
         public override void Execute(ParameterBundle bundle)

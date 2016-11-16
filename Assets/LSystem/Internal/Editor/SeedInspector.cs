@@ -27,6 +27,9 @@ namespace LSystem
             serBakedRotationMin = serializedObject.FindProperty("bakedRotationMin");
             serBakedScaleMax = serializedObject.FindProperty("bakedScaleMax");
             serBakedScaleMin = serializedObject.FindProperty("bakedScaleMin");
+
+            serBakedScaleOnSpawn = serializedObject.FindProperty("bakedScaleOnSpawn");
+            serBakedScaleTime = serializedObject.FindProperty("bakedScaleTime");
         }
 
         public override void OnInspectorGUI()
@@ -56,14 +59,27 @@ namespace LSystem
             if(serBaked.boolValue)
             {
                 EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(serPrefabIdentifier);
-                EditorGUILayout.Space();
+              
                 EditorGUILayout.PropertyField(serBakedRotationMax);
                 EditorGUILayout.PropertyField(serBakedRotationMin);
                 EditorGUILayout.PropertyField(serBakedScaleMax);
-                EditorGUILayout.PropertyField(serBakedScaleMin); 
+                EditorGUILayout.PropertyField(serBakedScaleMin);
+                EditorGUILayout.Space();
+                EditorGUILayout.PropertyField(serPrefabIdentifier);
+                EditorGUILayout.Space();
+
+                EditorGUILayout.PropertyField(serBakedScaleOnSpawn);
+                if (serBakedScaleOnSpawn.boolValue)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(serBakedScaleTime);
+                    EditorGUI.indentLevel--;
+                }
+
                 EditorGUI.indentLevel--;
             }
+
+            
 
             serializedObject.ApplyModifiedProperties();
 
@@ -525,5 +541,8 @@ namespace LSystem
         protected SerializedProperty serBakedRotationMin;
         protected SerializedProperty serBakedScaleMax;
         protected SerializedProperty serBakedScaleMin;
+
+        protected SerializedProperty serBakedScaleOnSpawn;
+        protected SerializedProperty serBakedScaleTime;
     }
 }
