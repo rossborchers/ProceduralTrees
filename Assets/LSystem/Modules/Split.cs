@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
+using System;
 
 namespace LSystem
 {
@@ -12,7 +13,17 @@ namespace LSystem
             ethereal = true;
         }
 
+        public override void Bake(ParameterBundle bundle)
+        {
+            AnyExecute(bundle);
+        }
+
         public override void Execute(ParameterBundle bundle)
+        {
+            AnyExecute(bundle);
+        }
+
+        protected void AnyExecute(ParameterBundle bundle)
         {
             Sentence sentence;
             CharGameObjectDict implementations;
@@ -33,9 +44,19 @@ namespace LSystem
 
             Sentence split = sentence.PopPositionAndCut();
 
-            EnqueueProcessNextModule(transform, sentence, implementations, rules, bundle);
-            EnqueueProcessNextModule(transform, split, implementations, rules, bundle);
+            if (baked)
+            {
+                BakeNextModule(transform, sentence, implementations, rules, bundle);
+                BakeNextModule(transform, split, implementations, rules, bundle);
+            }
+            else
+            {
+                EnqueueProcessNextModule(transform, sentence, implementations, rules, bundle);
+                EnqueueProcessNextModule(transform, split, implementations, rules, bundle);
+            }
+
             Destroy(gameObject);
         }
+
     }
 }

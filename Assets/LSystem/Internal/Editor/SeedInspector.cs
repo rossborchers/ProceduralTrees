@@ -19,6 +19,14 @@ namespace LSystem
 
             serGenerateMode = serializedObject.FindProperty("generateMode");
             serIterations = serializedObject.FindProperty("iterations");
+
+            serBaked = serializedObject.FindProperty("baked");
+            serPrefabIdentifier = serializedObject.FindProperty("prefabIdentifier");
+
+            serBakedRotationMax = serializedObject.FindProperty("bakedRotationMax");
+            serBakedRotationMin = serializedObject.FindProperty("bakedRotationMin");
+            serBakedScaleMax = serializedObject.FindProperty("bakedScaleMax");
+            serBakedScaleMin = serializedObject.FindProperty("bakedScaleMin");
         }
 
         public override void OnInspectorGUI()
@@ -44,6 +52,19 @@ namespace LSystem
            
             EditorGUILayout.Space();
 
+            EditorGUILayout.PropertyField(serBaked);
+            if(serBaked.boolValue)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(serPrefabIdentifier);
+                EditorGUILayout.Space();
+                EditorGUILayout.PropertyField(serBakedRotationMax);
+                EditorGUILayout.PropertyField(serBakedRotationMin);
+                EditorGUILayout.PropertyField(serBakedScaleMax);
+                EditorGUILayout.PropertyField(serBakedScaleMin); 
+                EditorGUI.indentLevel--;
+            }
+
             serializedObject.ApplyModifiedProperties();
 
             //Can't multi edit
@@ -60,7 +81,6 @@ namespace LSystem
             {
                 EditorGUILayout.HelpBox("Unapplied prefab changes will be lost on play or editor close.", MessageType.Warning);
             }
-            
         }
 
         protected void DrawStartingParams()
@@ -498,5 +518,12 @@ namespace LSystem
 
         protected SerializedProperty serGenerateMode;
         protected SerializedProperty serIterations;
+
+        protected SerializedProperty serBaked;
+        protected SerializedProperty serPrefabIdentifier;
+        protected SerializedProperty serBakedRotationMax;
+        protected SerializedProperty serBakedRotationMin;
+        protected SerializedProperty serBakedScaleMax;
+        protected SerializedProperty serBakedScaleMin;
     }
 }

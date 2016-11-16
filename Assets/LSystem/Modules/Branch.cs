@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace LSystem
 {
@@ -54,9 +55,122 @@ namespace LSystem
         protected float topRadius = 0;
         protected float faces;
 
+        // Note that this assumes all prefab instances have the same name!
+        static Dictionary<string, List<MeshFilter>> bakedPrefabFilters = new Dictionary<string, List<MeshFilter>>();
+
         public override void Execute(ParameterBundle bundle)
         {
             StartCoroutine(Grow(bundle));
+        }
+
+        public override void Bake(ParameterBundle bundle)
+        {
+            //Get parameters
+            Vector3 heading;
+            Sentence sentence;
+            CharGameObjectDict implementations;
+            int generation;
+            RuleSet rules;
+
+            // Check valid state for growing
+            if (!GetCoreParameters(bundle, out sentence, out implementations, out rules)
+             || !GetPositionParameters(bundle, out generation, out heading)) return;
+
+            // Setup Renderer
+            if ((filter = gameObject.GetComponent<MeshFilter>()) == null)
+            {
+                filter = gameObject.AddComponent<MeshFilter>();
+            }
+            if ((branchRenderer = gameObject.GetComponent<MeshRenderer>()) == null)
+            {
+                branchRenderer = gameObject.AddComponent<MeshRenderer>();
+            }
+            branchRenderer.material = branchMaterial;
+
+            //Match start position to previous position. As growth progresses position will be offset
+            //While heading stays the same
+            transform.position = previous.transform.position;
+            transform.up = heading;
+
+            // Try and pick up length and radius where last branch left off.
+            float length, radius; 
+            if (bundle.Get("BranchLength", out length)) startLength = length;
+            if (bundle.Get("BranchRadius", out radius)) startRadius = radius;
+            if (bundle.Get("BranchFaceNum", out faces)) startFaceNum = faces;
+
+            int branchIndex = 0;
+            bundle.Get("BakedBranchIndex", out branchIndex);
+
+            GrowLoopCallback growLoopCallback;
+            bundle.Get("GrowLoopCallback", out growLoopCallback);
+
+            radius = startRadius;
+            length = startLength;
+            faces = startFaceNum;
+
+            // Since we don't want to continue drawing where it doesn't matter!
+            // Note that future emergence is killed here.
+            if (length < lengthCutoff || radius < radiusCutoff) return;
+
+            if (endObject != null)
+            {
+                endObject = (GameObject)Instantiate(endObject, transform);
+                Module mod = endObject.GetComponent<Module>();
+                if (mod != null)
+                {
+                    AssignPrevious(mod, this);
+                    if (mod.GetType() != typeof(Seed))
+                    {
+                        Kill(mod);
+
+                        SetPrefabIdentifier(mod); 
+                        mod.Bake(bundle);
+                    }
+                }
+                endObject.transform.up = heading;
+            }
+
+            transform.position += heading * length;
+
+            bool meshNeeded = false;
+            List<MeshFilter> sharedFilters;
+            if (bakedPrefabFilters.TryGetValue(prefabIdentifier, out sharedFilters))
+            {
+                if (sharedFilters.Count > branchIndex)
+                {
+                    filter.mesh = sharedFilters[branchIndex].sharedMesh;
+                }
+                else meshNeeded = true;
+            }
+            else 
+            {
+                bakedPrefabFilters.Add(prefabIdentifier, new List<MeshFilter>());
+                meshNeeded = true;
+            }
+
+            if(meshNeeded)
+            {
+                float distance = Vector3.Distance(transform.position, previous.transform.position);
+                bottomRadius = startRadius;
+                UpdateBranch(Vector3.up * -distance, distance, bottomRadius * bottomRadiusMultiplier, topRadius * topRadiusMultiplier, Mathf.Max(2, (int)(faces)));
+            }
+
+            if (endObject != null)
+            {
+                endObject.transform.position = transform.position;
+                endObject.transform.up = heading;
+            }
+
+            // Update parameters for next branch
+            bundle.SetOrPut("BranchLength", length * lengthChangeCoefficient);
+            bundle.SetOrPut("BranchRadius", radius * radiusChangeCoefficient);
+            bundle.SetOrPut("BranchFaceNum", faces * faceNumChangeCoefficient);
+
+            bundle.SetOrPut("BakedBranchIndex", ++branchIndex);
+
+            if (setStaticOnComplete) gameObject.isStatic = true;
+
+            BakeNextModule(transform, sentence, implementations, rules, bundle);
         }
 
         IEnumerator Grow(ParameterBundle bundle)
@@ -132,7 +246,7 @@ namespace LSystem
                 distance = Vector3.Distance(transform.position, previous.transform.position);
 
                 bottomRadius = Mathf.Lerp(0, startRadius, completionRatio);
-                filter = UpdateBranch(Vector3.up * -distance, distance, bottomRadius * bottomRadiusMultiplier, topRadius * topRadiusMultiplier, Mathf.Max(2,(int)(faces)), filter);
+                UpdateBranch(Vector3.up * -distance, distance, bottomRadius * bottomRadiusMultiplier, topRadius * topRadiusMultiplier, Mathf.Max(2,(int)(faces)));
                 if(growLoopCallback != null) growLoopCallback(bottomRadius);
 
                 if(endObject != null)
@@ -168,11 +282,11 @@ namespace LSystem
         {
             topRadius = radius;
             float distance = Vector3.Distance(transform.position, previous.transform.position);
-            filter = UpdateBranch(Vector3.up * -distance, distance, bottomRadius * bottomRadiusMultiplier, topRadius * topRadiusMultiplier, Mathf.Max(2, (int)(faces)), filter);
+            UpdateBranch(Vector3.up * -distance, distance, bottomRadius * bottomRadiusMultiplier, topRadius * topRadiusMultiplier, Mathf.Max(2, (int)(faces)));
         }
 
         // http://wiki.unity3d.com/index.php/ProceduralPrimitives
-        protected MeshFilter UpdateBranch(Vector3 offset, float height, float bottomRadius, float topRadius, int sides, MeshFilter filter)
+        protected void UpdateBranch(Vector3 offset, float height, float bottomRadius, float topRadius, int sides)
         {
             Mesh mesh = filter.mesh;
             mesh.Clear();
@@ -354,10 +468,9 @@ namespace LSystem
 
             mesh.RecalculateBounds();
             mesh.Optimize();
-
-            return filter;
         }
 
+        
     }
 
 }

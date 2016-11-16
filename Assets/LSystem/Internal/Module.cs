@@ -17,12 +17,43 @@ namespace LSystem
         /// <returns>Bundle containing any information that previous Modules may be interested in.</returns>
         public abstract void Execute(ParameterBundle bundle);
 
+        public abstract void Bake(ParameterBundle bundle);
+
+        [SerializeField]
         protected char symbol;
+
+        [SerializeField]
         protected bool ethereal;
+
+        [SerializeField]
         protected Module previous;
+
+        [SerializeField]
         protected bool dead;
 
+        [SerializeField]
+        protected bool baked;
+
+        [SerializeField]
+        protected string prefabIdentifier = null;
+
         static ModuleSheduler sheduler;
+
+        public void BakeNextModule(Transform caller, Sentence sentence, SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle)
+        {
+            Module previous;
+            if (this.ethereal)
+            {
+                // Since this module is ethereal we have to set the parent to this modules parent
+                // Note that this behavior is recursive up to the first non ethereal module or null.
+                previous = caller.parent.GetComponent<Module>();
+            }
+            else
+            {
+                previous = caller.GetComponent<Module>();
+            }
+            ProcessNextModule(previous, sentence, implementation, rules, bundle, true);
+        }
 
         public void EnqueueProcessNextModule(Transform caller, Sentence sentence, SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle)
         {
@@ -33,7 +64,7 @@ namespace LSystem
                 {
                     GameObject shedulerObject = new GameObject("LSystemModuleSheduler");
                     sheduler = shedulerObject.AddComponent<ModuleSheduler>();
-                    shedulerObject.hideFlags = HideFlags.HideAndDontSave;
+                    shedulerObject.hideFlags = HideFlags.HideInHierarchy;
                 }
             }
 
@@ -49,13 +80,21 @@ namespace LSystem
                 previous = caller.GetComponent<Module>();
             }
 
-            sheduler.EnqueueProcessNextModule(ProcessNextModule(previous, sentence, implementation, rules, bundle));
+            sheduler.EnqueueProcessNextModule(EnumerableProcessNextModule(previous, sentence, implementation, rules, bundle));
         }
 
-        IEnumerator ProcessNextModule(Module previous, Sentence sentence, SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle)
+        IEnumerator EnumerableProcessNextModule(Module previous, Sentence sentence, SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle)
         {
+            if(!ProcessNextModule(previous, sentence, implementation, rules, bundle, false))
+            {
+                yield break;
+            }
+        }
+
+        public bool ProcessNextModule(Module previous, Sentence sentence, SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle, bool baked)
+        {
+            if (dead) return false;
             Profiler.BeginSample("LSystem.Module.ProcessNextModule");
-            if (dead) yield break;
 
             GameObject module;
             char symbol = '\0';
@@ -80,7 +119,7 @@ namespace LSystem
                             if (generation > iterations)
                             {
                                 //Max iterations reached.
-                                yield break; 
+                                return false; 
                             }
                         }
                         if (!bundle.Set("Generation", generation))
@@ -91,20 +130,21 @@ namespace LSystem
                     else Debug.LogError("Cannot get 'Generation' parameter in GetAndExecuteModule", gameObject);
                 }
                 symbol = sentence.Next();
-                if (symbol == '\0') yield break; //Sentence is empty! Caused if rules do not generate anything from previous 
+                if (symbol == '\0') return false;  //Sentence is empty! Caused if rules do not generate anything from previous 
 
             } while (!implementation.TryGetValue(symbol, out module));
             KeyValuePair<GameObject, Sentence> newPair = new KeyValuePair<GameObject, Sentence>(module, sentence);
 
             Profiler.EndSample();
 
-            ExecuteModule(previous, newPair, bundle, symbol);
+            ExecuteModule(previous, newPair, bundle, symbol, baked);
+
+            return true;
         }
 
-
-        public void ExecuteModule(Module previous, KeyValuePair<GameObject, Sentence> moduleSentancePair, ParameterBundle bundle, char symbol)
+        public void ExecuteModule(Module previous, KeyValuePair<GameObject, Sentence> moduleSentancePair, ParameterBundle bundle, char symbol, bool baked)
         {
-            if(previous == null) return; // if object is destoyed externally
+            if(previous == null) return; // if object is destroyed externally
 
             Profiler.BeginSample("LSystem.Module.ExecuteModule");
 
@@ -122,9 +162,18 @@ namespace LSystem
         
             module.symbol = symbol;
 
+            //Seeds are baked separately so their baked value must not be overwritten.
+            //Is there a way to avoid this special case in module? 
+            if(module.GetType() != typeof(Seed)) module.baked = baked;
+
             Profiler.EndSample();
 
-            module.Execute(newBundle);
+            if (baked)
+            {
+                if (prefabIdentifier == null) prefabIdentifier = gameObject.name;
+                module.Bake(newBundle);
+            }
+            else module.Execute(newBundle);
         }
 
         protected void AssignPrevious(Module next, Module previous)
@@ -132,9 +181,20 @@ namespace LSystem
             next.previous = previous;
         }
 
-        protected void Kill(Module toKill)
+      
+
+        protected void SetPrefabIdentifier(Module module)
+        {
+            module.prefabIdentifier = gameObject.name;
+        }
+
+        public void Kill(Module toKill)
         {
             toKill.dead = true;
+        }
+        public bool Dead()
+        {
+            return dead;
         }
 
         // Retrial for parameters common to most LSystems are wrapped here for convenience.

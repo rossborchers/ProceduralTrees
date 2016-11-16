@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace LSystem
 {
@@ -42,7 +43,10 @@ namespace LSystem
         protected bool setStaticOnComplete = true;
 
         [SerializeField]
-        protected bool dynamic = false;
+        protected bool animate = true;
+
+        [SerializeField]
+        protected bool continuousUpdate = false;
 
         [SerializeField]
         protected Material leafMaterial;
@@ -51,9 +55,11 @@ namespace LSystem
         protected MeshRenderer leafFenderer;
         protected Mesh mesh;
 
-        public override void Execute(ParameterBundle bundle)
+        static Dictionary<string, MeshFilter> bakedPrefabFilters = new Dictionary<string, MeshFilter>();
+
+        public override void Bake(ParameterBundle bundle)
         {
-            if((filter = gameObject.GetComponent<MeshFilter>()) == null)
+            if ((filter = gameObject.GetComponent<MeshFilter>()) == null)
             {
                 filter = gameObject.AddComponent<MeshFilter>();
             }
@@ -63,7 +69,48 @@ namespace LSystem
             }
             leafFenderer.material = leafMaterial;
 
-            if(gameObject.activeSelf)
+            //Get parameters
+            Vector3 heading;
+            Sentence sentence;
+            CharGameObjectDict implementations;
+            int generation;
+            RuleSet rules;
+
+            // Check valid state for growing
+            if (!GetCoreParameters(bundle, out sentence, out implementations, out rules)
+             || !GetPositionParameters(bundle, out generation, out heading)) return;
+
+            transform.position = previous.transform.position;
+            transform.up = heading;
+
+            MeshFilter sharedFilter;
+            if(bakedPrefabFilters.TryGetValue(prefabIdentifier, out sharedFilter))
+            {
+                filter.mesh = sharedFilter.sharedMesh;
+            }
+            else
+            {
+                UpdateMesh( 1, Vector3.zero);
+                bakedPrefabFilters.Add(prefabIdentifier, filter);
+            }
+            if (setStaticOnComplete) gameObject.isStatic = true;
+
+            BakeNextModule(transform, sentence, implementations, rules, bundle);
+        }
+
+        public override void Execute(ParameterBundle bundle)
+        {
+            if ((filter = gameObject.GetComponent<MeshFilter>()) == null)
+            {
+                filter = gameObject.AddComponent<MeshFilter>();
+            }
+            if ((leafFenderer = gameObject.GetComponent<MeshRenderer>()) == null)
+            {
+                leafFenderer = gameObject.AddComponent<MeshRenderer>();
+            }
+            leafFenderer.material = leafMaterial;
+
+            if (gameObject.activeSelf)
             {
                 StartCoroutine(Grow(bundle));
             }
@@ -92,12 +139,13 @@ namespace LSystem
 
             Vector3 medialPos = transform.position;
             Vector3 medialHeading = heading;
-
-            float time = 0f;
-            while(time < startGrowTime)
+        
+            float time = 1f;
+            if (animate) time = 0f;
+            while (time < startGrowTime)
             {
                 time += Time.deltaTime;
-                UpdateMesh(time/ startGrowTime, Vector3.zero);
+                UpdateMesh(time / startGrowTime, Vector3.zero);
                 yield return null;
             }
 
@@ -109,7 +157,7 @@ namespace LSystem
 
             EnqueueProcessNextModule(transform, sentence, implementations, rules, bundle);
 
-            if(dynamic)
+            if(continuousUpdate)
             {
                 while(true)
                 {
@@ -118,7 +166,6 @@ namespace LSystem
                 }
             }
         }
-
 
         void UpdateMesh(float normalizedTime, Vector3 offset)
         {
@@ -156,14 +203,11 @@ namespace LSystem
                 return;
             }
 
-            //Debug.Log(normalizedTime);
-
             Mesh mesh = filter.mesh;
             mesh.Clear();
 
             float localMedSize = startMedialSize * normalizedTime;
             float localLatSize = startLateralSize * normalizedTime;
-
 
             int vertexNumMed = medialSegments + 1;
             int vertexNumLat = lateralSegments + lateralSegments + 1;
@@ -256,7 +300,6 @@ namespace LSystem
 
         int UpdateIndecies(int indexPos, int pos, int x, int y, ref int[] indecies)
         {
-            //TODO: this looks fishy
             indecies[indexPos++] = pos;
             indecies[indexPos++] = pos + x;
             indecies[indexPos++] = pos + x + y;
