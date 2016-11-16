@@ -1,51 +1,66 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using System.Collections;
-using System;
 
 namespace LSystem
 {
     /// <summary>
-    /// LSystem symbol implementation base for modules that are components.
+    /// LSystem symbol implementation base for module components. Core LSystem algorithm
     /// </summary>
     public abstract class Module : MonoBehaviour
     {
         /// <summary>
-        /// A unified LSystem symbol implementation execution point with a parameter list. 
+        /// A unified LSystem symbol implementation execution point with a parameter list for dynamic execution. 
         /// </summary>
         /// <param name="bundle">Bundle containing information collected by previous iterations</param>
         /// <returns>Bundle containing any information that previous Modules may be interested in.</returns>
         public abstract void Execute(ParameterBundle bundle);
 
+        /// <summary>
+        /// A unified LSystem symbol implementation execution point with a parameter list for pre-baked execution. 
+        /// </summary>
+        /// <param name="bundle">Bundle containing information collected by previous iterations</param>
+        /// <returns>Bundle containing any information that previous Modules may be interested in.</returns>>
         public abstract void Bake(ParameterBundle bundle);
 
+        // Serialization is required for Instantiate() to copy values. but we don't want the items visible.
+        
+        // The symbol that represents this module in the seed implementation parameters   
         [HideInInspector]
         [SerializeField]
         protected char symbol;
 
+        // If a module is ethereal we cannot rely on it being alive.
+        // It should not be incorporated into the hierarchy and no references that cant be broken should be kept.
         [HideInInspector]
         [SerializeField]
         protected bool ethereal;
 
+        // The previous (Non ethereal) module. required for connecting the dots.
         [HideInInspector]
         [SerializeField]
         protected Module previous;
 
+        // If a module is dead it should not carry on Executing modules. Used with baking.
         [HideInInspector]
         [SerializeField]
         protected bool dead;
 
+        // Is this Module baked? Inherited from previous modules. 
         [HideInInspector]
         [SerializeField]
         protected bool baked;
 
+        //used to compare "prefab" instances at runtime. this is then used to share meshes.
         [HideInInspector]
         [SerializeField]
         protected string prefabIdentifier = null;
 
         static ModuleSheduler sheduler;
 
-        public void BakeNextModule(Transform caller, Sentence sentence, SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle)
+        // Execute next module as a bake (no delay) operation.
+        public void BakeNextModule(Transform caller, Sentence sentence, 
+                                   SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle)
         {
             Module previous;
             if (this.ethereal)
@@ -61,7 +76,9 @@ namespace LSystem
             ProcessNextModule(previous, sentence, implementation, rules, bundle, true);
         }
 
-        public void EnqueueProcessNextModule(Transform caller, Sentence sentence, SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle)
+        // Execute next module as a IEnumerator (undefined delay based on load) operation.
+        public void EnqueueProcessNextModule(Transform caller, Sentence sentence, 
+                                             SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle)
         {
             if(sheduler == null)
             {
@@ -89,7 +106,9 @@ namespace LSystem
             sheduler.EnqueueProcessNextModule(EnumerableProcessNextModule(previous, sentence, implementation, rules, bundle));
         }
 
-        IEnumerator EnumerableProcessNextModule(Module previous, Sentence sentence, SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle)
+        // Called from the module scheduler when there is time.
+        IEnumerator EnumerableProcessNextModule(Module previous, Sentence sentence, 
+                                                SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle)
         {
             if(!ProcessNextModule(previous, sentence, implementation, rules, bundle, false))
             {
@@ -97,7 +116,10 @@ namespace LSystem
             }
         }
 
-        public bool ProcessNextModule(Module previous, Sentence sentence, SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle, bool baked)
+        // Parse the sentence, load symbol implementations and find the next module to execute. 
+        // One module is executed at a time, and an internal pointer is adjusted to for the next iteration.
+        public bool ProcessNextModule(Module previous, Sentence sentence, 
+                                       SerializableDictionary<char, GameObject> implementation, RuleSet rules, ParameterBundle bundle, bool baked)
         {
             if (dead) return false;
             Profiler.BeginSample("LSystem.Module.ProcessNextModule");
@@ -148,6 +170,7 @@ namespace LSystem
             return true;
         }
 
+        // Once ProcessNextModule has found an executable module 
         public void ExecuteModule(Module previous, KeyValuePair<GameObject, Sentence> moduleSentancePair, ParameterBundle bundle, char symbol, bool baked)
         {
             if(previous == null) return; // if object is destroyed externally
@@ -183,7 +206,6 @@ namespace LSystem
             next.previous = previous;
         }
       
-
         protected void SetPrefabIdentifier(Module module)
         {
             module.prefabIdentifier = gameObject.name;

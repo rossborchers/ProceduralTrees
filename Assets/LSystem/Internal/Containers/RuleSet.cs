@@ -3,6 +3,9 @@ using System;
 
 namespace LSystem
 {
+    ///<summary>
+    /// Stores rules (char -> string) relationships and uses them to evolve sentences.
+    ///</summary>
     [Serializable]
     public class RuleSet
     {

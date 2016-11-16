@@ -5,78 +5,99 @@ using UnityEditor;
 
 namespace LSystem
 {
+    /// <summary>
+    /// Dynamic leaf generation module with batching support.
+    /// </summary> 
     [ExecuteInEditMode]
     public class Leaf : Module
     {
         [SerializeField]
+        [Tooltip("Number of segments for one horizontal size of the leaf. (total segments will be x 2)")]
         protected int lateralSegments = 1;
 
         [SerializeField]
+        [Tooltip("Number of vertical segments on the leaf.")]
         protected int medialSegments = 2;
 
         [SerializeField]
+        [Tooltip("Total vertical size of leaf.")]
         protected float startMedialSize = 1;
 
         [SerializeField]
+        [Tooltip("Half horizontal size of leaf.")]
         protected float startLateralSize = 1;
 
         [SerializeField]
+        [Tooltip("Local Mesh offset.")]
         protected Vector3 offset = Vector3.zero;
 
         [SerializeField]
+        [Tooltip("Start growing time. This will be updated recursively")]
         protected float startGrowTime = 1;
 
         [SerializeField]
+        [Tooltip("Shape of the leaf")]
         protected AnimationCurve contour = new AnimationCurve(new Keyframe[] { new Keyframe(0, 1, 0, 0), new Keyframe(1, 1, 0, 0) });
 
         [SerializeField]
+        [Tooltip("Rotation around the local horizontal axis for each point on the curve. 1 = 90*")]
         protected AnimationCurve medialRotation = new AnimationCurve(new Keyframe[] { new Keyframe(0, 0, 0, 0), new Keyframe(1, 0, 0, 0) });
 
         [SerializeField]
+        [Tooltip("Rotation around the local vertical axis. 1 = 90*")]
         protected AnimationCurve lateralRotation = new AnimationCurve(new Keyframe[] { new Keyframe(0, 0, 0, 0), new Keyframe(1, 0, 0, 0) });
 
         [SerializeField]
+        [Tooltip("Coefficient multiply to medial size by per leaf.")]
         protected float medialSizeChangeCoefficient = 1f;
 
         [SerializeField]
+        [Tooltip("Coefficient multiply to lateral size by per leaf.")]
         protected float lateralSizeChangeCoefficient = 1f;
 
         [SerializeField]
+        [Tooltip("Coefficient to multiply grow time by per leaf.")]
         protected float growTimeChangeCoefficient = 1f;
 
         [SerializeField]
         protected bool setStaticOnComplete = true;
 
         [SerializeField]
+        [Tooltip("Should the leaf grow over time or start full size?")]
         protected bool animate = true;
 
         [SerializeField]
+        [Tooltip("Setting this to true will make the leaf responsive to any variable changes at the cost of redrawing each frame.")]
         protected bool continuousUpdate = false;
 
         [SerializeField]
+        [Tooltip("Material to apply to leaf renderer.")]
         protected Material leafMaterial;
 
         [SerializeField]
+        [Tooltip("Modulate animation position while in edit mode.")]
         [Range(0,1)]
         protected float editorTimeValue = 1f;
 
         protected MeshFilter filter;
-        protected MeshRenderer leafFenderer;
+        protected MeshRenderer leafRenderer;
         protected Mesh mesh;
 
+        // stores shared meshes for each baked instance with the same prefabIdentifier. 
         static Dictionary<string, MeshFilter> bakedPrefabFilters = new Dictionary<string, MeshFilter>();
 
+        // Entry point when pre-baking LSystem.
         public override void Bake(ParameterBundle bundle)
         {
             if ((filter = gameObject.GetComponent<MeshFilter>()) == null)
             {
                 filter = gameObject.AddComponent<MeshFilter>();
             }
-            if ((leafFenderer = gameObject.GetComponent<MeshRenderer>()) == null)
+            if ((leafRenderer = gameObject.GetComponent<MeshRenderer>()) == null)
             {
-                leafFenderer = gameObject.AddComponent<MeshRenderer>();
+                leafRenderer = gameObject.AddComponent<MeshRenderer>();
             }
-            leafFenderer.material = leafMaterial;
+            leafRenderer.material = leafMaterial;
 
             //Get parameters
             Vector3 heading;
@@ -107,17 +128,18 @@ namespace LSystem
             BakeNextModule(transform, sentence, implementations, rules, bundle);
         }
 
+        // Entry point when dynamically executing LSystem.
         public override void Execute(ParameterBundle bundle)
         {
             if ((filter = gameObject.GetComponent<MeshFilter>()) == null)
             {
                 filter = gameObject.AddComponent<MeshFilter>();
             }
-            if ((leafFenderer = gameObject.GetComponent<MeshRenderer>()) == null)
+            if ((leafRenderer = gameObject.GetComponent<MeshRenderer>()) == null)
             {
-                leafFenderer = gameObject.AddComponent<MeshRenderer>();
+                leafRenderer = gameObject.AddComponent<MeshRenderer>();
             }
-            leafFenderer.material = leafMaterial;
+            leafRenderer.material = leafMaterial;
 
             if (gameObject.activeSelf)
             {
@@ -125,6 +147,7 @@ namespace LSystem
             }
         }
 
+        // Run the update loop to grow the mesh when not baked
         IEnumerator Grow(ParameterBundle bundle)
         {
             //Get parameters
@@ -146,9 +169,6 @@ namespace LSystem
             transform.position = previous.transform.position;
             transform.up = heading;
 
-            Vector3 medialPos = transform.position;
-            Vector3 medialHeading = heading;
-        
             float time = 1f;
             if (animate) time = 0f;
             while (time < startGrowTime)
@@ -176,7 +196,8 @@ namespace LSystem
             }
         }
 
-#if UNITY_EDITOR
+        //Editor only mesh rendering code for visual feedback
+        #if UNITY_EDITOR
         // Called in edit mode
         protected void Update()
         {
@@ -184,17 +205,20 @@ namespace LSystem
             {
                 filter = gameObject.AddComponent<MeshFilter>();
             }
-            if ((leafFenderer = gameObject.GetComponent<MeshRenderer>()) == null)
+            if ((leafRenderer = gameObject.GetComponent<MeshRenderer>()) == null)
             {
-                leafFenderer = gameObject.AddComponent<MeshRenderer>();
+                leafRenderer = gameObject.AddComponent<MeshRenderer>();
             }
-            leafFenderer.material = leafMaterial;
+            leafRenderer.material = leafMaterial;
 
             if (Application.isPlaying) return;
 
             UpdateMesh(editorTimeValue, offset);
         }
-#endif
+        #endif
+
+
+        // Draw the leaf mesh.
         void UpdateMesh(float normalizedTime, Vector3 offset)
         {
             /*  
@@ -219,6 +243,7 @@ namespace LSystem
              *        
              */
 
+            //Validate parameters
             normalizedTime = Mathf.Max(Mathf.Min(1f, normalizedTime));
             if (medialSegments < 1)
             {
@@ -231,6 +256,7 @@ namespace LSystem
                 return;
             }
 
+            //Ensure no mesh leakage in edit mode
             Mesh mesh;
             if (!Application.isPlaying)
             {
@@ -243,9 +269,11 @@ namespace LSystem
             else mesh = filter.mesh;
             mesh.Clear();
 
+            // How big is the leaf currently?
             float localMedSize = startMedialSize * normalizedTime;
             float localLatSize = startLateralSize * normalizedTime;
 
+            //calculate num verts and build arrays.
             int vertexNumMed = medialSegments + 1;
             int vertexNumLat = lateralSegments + lateralSegments + 1;
 
@@ -257,6 +285,7 @@ namespace LSystem
             Vector2[] uvs = new Vector2[numVerts];
             int[] indecies = new int[numIndecies];
 
+            // Use similar system to L system. (Stepwize calculation of rotations)
             Vector3 medialHeading = Vector3.up;
             Vector3 lateralHeading = Vector3.right;
 
@@ -274,6 +303,8 @@ namespace LSystem
 
             for (int i = 0; i < numVerts; i+= vertexNumLat)
             {
+                //Calculate center (medial) pos and heading
+
                 float normalizedMedPos = (i / vertexNumLat) / (float)medialSegments;
                 float medRotationCoeff = medialRotation.Evaluate(normalizedTime * normalizedMedPos);
 
@@ -296,8 +327,11 @@ namespace LSystem
                 lastLateralPosRight = Vector3.zero;
                 for (int j = 1; j < positiveLatEndPos + 1; j+=2)
                 {
+                    //We calculate one lateral size and invert the local X axis
+
                     float normalizedLateralPos = ((j == 1) ? 1 : j - 1) / (float)lateralSegments;
 
+                    //Calculate contour and lateral rotation
                     float contourValue = contour.Evaluate(normalizedMedPos);
                     float lateralRotationCoeff = lateralRotation.Evaluate(normalizedLateralPos * normalizedTime);
 
@@ -313,6 +347,7 @@ namespace LSystem
                     lastLateralPosLeft = lateralPosLeft;
                     lastLateralPosRight = lateralPosRight;
 
+                    //update positions
                     verts[rightVertIndex] = offset + segmentCenter + lateralPosRight;
                     normals[rightVertIndex] = Quaternion.AngleAxis(90, medialHeading) * finalHeadingRight;
                     uvs[rightVertIndex] = Vector3.one;
@@ -321,6 +356,7 @@ namespace LSystem
                     normals[leftVertIndex] = Quaternion.AngleAxis(90, medialHeading) * finalHeadingLeft;
                     uvs[leftVertIndex] = Vector3.one;
 
+                    //if top left is not out of range calculate indecies
                     if (rightVertIndex < topIndexCutoff && rightVertIndex != invalidLatIndexPos) indexPos = UpdateIndecies(indexPos, rightVertIndex, 2, vertexNumLat, ref indecies);
                     if (leftVertIndex < topIndexCutoff) indexPos = UpdateIndecies(indexPos, leftVertIndex, -2, vertexNumLat, ref indecies); 
                 }
@@ -334,7 +370,8 @@ namespace LSystem
             mesh.RecalculateBounds();
             mesh.Optimize();
         }
-
+    
+        // Build triangles out of the verts based on the pattern outlined above
         int UpdateIndecies(int indexPos, int pos, int x, int y, ref int[] indecies)
         {
             indecies[indexPos++] = pos;

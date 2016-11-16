@@ -1,46 +1,55 @@
 ﻿using UnityEngine;
-using System.Collections.Generic;
-using System;
 
 namespace LSystem
 {
+    /// <summary>
+    /// Rotate an incoming heading and call the next module.
+    /// </summary>
     public class Rotate : Module
     {
         [SerializeField]
+        [Tooltip("Maximum possible rotation. If max and min are the same there can be no variance.")]
         protected Vector3 eulerAnglesMax;
 
         [SerializeField]
+        [Tooltip("Minimum possible rotation. If max and min are the same there can be no variance.")]
         protected Vector3 eulerAnglesMin;
 
-        Rotate() :base()
+        public Rotate() :base()
         {
             ethereal = true;
         }
 
+        // Entry point when pre-baking LSystem.
         public override void Bake(ParameterBundle bundle)
         {
             AnyExecute(bundle);
         }
 
+        // Entry point when dynamically generating LSystem.
         public override void Execute(ParameterBundle bundle)
         {
             AnyExecute(bundle);
         }
 
+        // Encapsulates common functionality between Bake and Execute. 
         protected void AnyExecute(ParameterBundle bundle)
         {
+            //try get relevant prams.
             bool fatal = false;
             Sentence sentence;
             CharGameObjectDict implementations;
             RuleSet rules;
             if (!GetCoreParameters(bundle, out sentence, out implementations, out rules)) fatal = true;
 
+            // Perform simple rotation on heading.
+            // Note that many rotations are not easily possible with this method. Needs to be improved.
             Vector3 heading;
             if (bundle.Get("Heading", out heading))
             {
-                heading = Quaternion.Euler(new Vector3(UnityEngine.Random.Range(eulerAnglesMin.x, eulerAnglesMax.x),
-                                                                 UnityEngine.Random.Range(eulerAnglesMin.y, eulerAnglesMax.y),
-                                                                 UnityEngine.Random.Range(eulerAnglesMin.z, eulerAnglesMax.z))) * heading;
+                heading = Quaternion.Euler(new Vector3( Random.Range(eulerAnglesMin.x, eulerAnglesMax.x),
+                                                        Random.Range(eulerAnglesMin.y, eulerAnglesMax.y),
+                                                        Random.Range(eulerAnglesMin.z, eulerAnglesMax.z))) * heading;
                 bundle.Set("Heading", heading);
             }
             else
@@ -49,10 +58,11 @@ namespace LSystem
             }
             if (!fatal)
             {
+                //Call next module
                 if(baked) BakeNextModule(transform, sentence, implementations, rules, bundle);
                 else EnqueueProcessNextModule(transform, sentence, implementations, rules, bundle);
             }
-            Destroy(gameObject);
+            Destroy(gameObject); //once rotation  and next module clled we can destroy the object.
         }
     }
 }

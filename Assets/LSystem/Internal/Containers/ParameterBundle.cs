@@ -229,9 +229,5 @@ namespace LSystem
             }
             return store;
         }
-
-
-
-
     }
 }

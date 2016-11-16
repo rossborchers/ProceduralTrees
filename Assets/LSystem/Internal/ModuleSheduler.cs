@@ -4,6 +4,9 @@ using System.Collections.Generic;
 
 namespace LSystem
 {
+    ///<summary>
+    /// Runs a maximum number of module executions per frame to avoid performance drops with lots of branching  
+    ///</summary>
     public class ModuleSheduler : MonoBehaviour
     {
         public int MaxNewModulesPerFrame { get { return maxNewModulesPerFrame; } set { maxNewModulesPerFrame = value; } }

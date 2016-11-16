@@ -4,50 +4,73 @@ using System.Collections.Generic;
 
 namespace LSystem
 {
+    /// <summary>
+    /// Translates and draws a mesh along a heading, neighboring connects meshes to each other
+    /// </summary>
     public class Branch : Module 
     {
         [SerializeField]
+        [Tooltip("A cutoff to recursion based on branch length.")]
         protected float lengthCutoff = 0.001f;
 
         [SerializeField]
+        [Tooltip("A cutoff to recursion based on branch radius.")]
         protected float radiusCutoff = 0.001f;
 
         [SerializeField]
+        [Tooltip("The starting length of branches. This will be recursively adjusted.")]
         protected float startLength = 1f;
+
         [SerializeField]
+        [Tooltip("Coefficient to multiply length by per branch.")]
         protected float lengthChangeCoefficient = 1f;
 
         [SerializeField]
+        [Tooltip("The starting radius of branches. This will be recursively adjusted.")]
         protected float startRadius = 1f;
+
         [SerializeField]
+        [Tooltip("Coefficient to multiply length by per branch.")]
         protected float radiusChangeCoefficient = 1f;
 
         [SerializeField]
+        [Tooltip("Constant multiplication on the top radius. For stepping effect.")]
         protected float topRadiusMultiplier = 1f;
 
         [SerializeField]
+        [Tooltip("Constant multiplication on the bottom radius.")]
         protected float bottomRadiusMultiplier = 1f;
 
         [SerializeField]
+        [Tooltip("The starting speed of branches. This will be recursively adjusted.")]
         protected float startGrowSpeed = 4f;
+
         [SerializeField]
+        [Tooltip("Coefficient to multiply growth speed by per branch.")]
         protected float growSpeedChangeCoefficient = 1f;
 
         [SerializeField]
+        [Tooltip("The starting number of cylinder faces. This will be recursively adjusted")]
         protected float startFaceNum = 6f;
+
         [SerializeField]
+        [Tooltip("Coefficient to multiply start cylinder faces by per branch. This is floored to the nearest int > 2")]
         protected float faceNumChangeCoefficient = 0.8f;
 
         [SerializeField]
+        [Tooltip("An object to move along with the end of the branch. It will be killed and executed.")]
         protected GameObject endObject = null;
 
         [SerializeField]
+        [Tooltip("Material the branch renderer will use.")]
         protected Material branchMaterial;
 
         [SerializeField]
         protected bool setStaticOnComplete = true;
 
+        // Used for coordinating cylinder between neighbors in line as they expand.
         protected delegate void GrowLoopCallback(float radius);
+
         protected MeshFilter filter;
         protected MeshRenderer branchRenderer;
 
@@ -55,14 +78,10 @@ namespace LSystem
         protected float topRadius = 0;
         protected float faces;
 
-        // Note that this assumes all prefab instances have the same name!
+        // Stores filters for baked batching.
         static Dictionary<string, List<MeshFilter>> bakedPrefabFilters = new Dictionary<string, List<MeshFilter>>();
 
-        public override void Execute(ParameterBundle bundle)
-        {
-            StartCoroutine(Grow(bundle));
-        }
-
+        // Entry point when pre-baking LSystem.
         public override void Bake(ParameterBundle bundle)
         {
             //Get parameters
@@ -112,6 +131,7 @@ namespace LSystem
             // Note that future emergence is killed here.
             if (length < lengthCutoff || radius < radiusCutoff) return;
 
+            // Update end object to final position and execute
             if (endObject != null)
             {
                 endObject = (GameObject)Instantiate(endObject, transform);
@@ -128,9 +148,10 @@ namespace LSystem
                 }
                 endObject.transform.up = heading;
             }
-
             transform.position += heading * length;
 
+            // Bake or reuse mesh.
+            // Meshes are reused based on prefabIdentifier
             bool meshNeeded = false;
             List<MeshFilter> sharedFilters;
             if (bakedPrefabFilters.TryGetValue(prefabIdentifier, out sharedFilters))
@@ -151,7 +172,8 @@ namespace LSystem
             {
                 float distance = Vector3.Distance(transform.position, previous.transform.position);
                 bottomRadius = startRadius;
-                UpdateBranch(Vector3.up * -distance, distance, bottomRadius * bottomRadiusMultiplier, radius * radiusChangeCoefficient, Mathf.Max(2, (int)(faces)));
+                UpdateBranch(Vector3.up * -distance, distance, bottomRadius * bottomRadiusMultiplier, 
+                                radius * radiusChangeCoefficient, Mathf.Max(2, (int)(faces)));
             }
 
             if (endObject != null)
@@ -170,6 +192,12 @@ namespace LSystem
             if (setStaticOnComplete) gameObject.isStatic = true;
 
             BakeNextModule(transform, sentence, implementations, rules, bundle);
+        }
+
+        // Entry point when dynamically executing LSystem.
+        public override void Execute(ParameterBundle bundle)
+        {
+            StartCoroutine(Grow(bundle));
         }
 
         IEnumerator Grow(ParameterBundle bundle)
@@ -196,8 +224,8 @@ namespace LSystem
             }
             branchRenderer.material = branchMaterial;
 
-            //Match start position to previous position. As growth progresses position will be offset
-            //While heading stays the same
+            // Match start position to previous position. As growth progresses position will be offset
+            // While heading stays the same
             transform.position = previous.transform.position;
             transform.up = heading;
 
@@ -241,11 +269,13 @@ namespace LSystem
             while(distance < length)
             {
                 float completionRatio = distance / length;
-                transform.position += heading * Mathf.Min(heading.magnitude * Time.deltaTime * Mathf.Lerp(startGrowSpeed, growSpeed * growSpeedChangeCoefficient, completionRatio), length);
+                transform.position += heading * Mathf.Min(heading.magnitude * Time.deltaTime * Mathf.Lerp(startGrowSpeed,
+                                                            growSpeed * growSpeedChangeCoefficient, completionRatio), length);
                 distance = Vector3.Distance(transform.position, previous.transform.position);
 
                 bottomRadius = Mathf.Lerp(0, startRadius, completionRatio);
-                UpdateBranch(Vector3.up * -distance, distance, bottomRadius * bottomRadiusMultiplier, topRadius * topRadiusMultiplier, Mathf.Max(2,(int)(faces)));
+                UpdateBranch(Vector3.up * -distance, distance, bottomRadius * bottomRadiusMultiplier, 
+                                            topRadius * topRadiusMultiplier, Mathf.Max(2,(int)(faces)));
                 if(growLoopCallback != null) growLoopCallback(bottomRadius);
 
                 if(endObject != null)
@@ -273,15 +303,13 @@ namespace LSystem
             EnqueueProcessNextModule(transform, sentence, implementations, rules, bundle);
         }
 
-        /// <summary>
-        /// Called on the next branch grow loop to let this branch match its bottom radius
-        /// </summary>
-        /// <param name="radius"></param>
+        // Called on the next branch grow loop to let this branch match its bottom radius
         protected void NextBranchGrowLoopCallback(float radius)
         {
             topRadius = radius;
             float distance = Vector3.Distance(transform.position, previous.transform.position);
-            UpdateBranch(Vector3.up * -distance, distance, bottomRadius * bottomRadiusMultiplier, topRadius * topRadiusMultiplier, Mathf.Max(2, (int)(faces)));
+            UpdateBranch(Vector3.up * -distance, distance, bottomRadius * bottomRadiusMultiplier,
+                                    topRadius * topRadiusMultiplier, Mathf.Max(2, (int)(faces)));
         }
 
         // http://wiki.unity3d.com/index.php/ProceduralPrimitives
@@ -469,7 +497,5 @@ namespace LSystem
             mesh.Optimize();
         }
 
-        
     }
-
 }

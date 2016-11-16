@@ -7,6 +7,9 @@ using System.IO;
 
 namespace LSystem
 {
+    ///<summary>
+    /// Custom Inspector for seed. Responsible for drawing SerializeDictionaries.
+    ///</summary>
     [CanEditMultipleObjects]
     [CustomEditor(typeof(Seed))]
     public class SeedInspector : Editor

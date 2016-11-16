@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
-using System;
 using System.Collections;
 
 namespace LSystem
@@ -18,59 +17,83 @@ namespace LSystem
 
         public bool IsRoot { get { return isRoot; } private set { isRoot = value; } }
         [SerializeField]
+        [Tooltip("If is root Seed will execute itself.")]
         protected bool isRoot;
 
         public string Axiom { get { return axiom; } set { axiom = value; } }
         [SerializeField]
+        [Tooltip("Initial character to kick off LSystem.")]
         protected string axiom;
 
+        // This is redundant.
+        [HideInInspector]
         public bool InheritHeading { get { return isRoot; } private set { isRoot = value; } }
-        [SerializeField] protected bool inheritHeading;
+        [SerializeField]
+        protected bool inheritHeading;
 
         public GenMode GenerateMode { get { return generateMode; } private set { generateMode = value; } }
         [SerializeField]
+        [Tooltip("PreEdgeRewrite: Pre-calculate as one big sentence. Past edges are recalculated. IterativeNodeRewrite:" +
+            "Interpret branches individually and remove them from the previous sentence. Past edges cannot be recalculated")]
         protected GenMode generateMode;
 
         public int Iterations { get { return iterations; } private set { iterations = value; } }
         [SerializeField]
+        [Tooltip("Number of times to apply rules to sentence to generate new sentence.")]
         protected int iterations;
+
+        //Random ranges are use to help reduce obviousness of duplicate meshes
 
         public Vector3 BakedRotationMax { get { return bakedRotationMax; } private set { bakedRotationMax = value; } }
         [SerializeField]
+        [Tooltip("Maximum potential rotation to apply to baked instance.")]
         protected Vector3 bakedRotationMax = Vector3.zero;
 
         public Vector3 BakedRotationMin { get { return bakedRotationMin; } private set { bakedRotationMin = value; } }
         [SerializeField]
+        [Tooltip("Minimum potential rotation to apply to baked instance.")]
         protected Vector3 bakedRotationMin = Vector3.zero;
 
         public float BakedScaleMax { get { return bakedScaleMax; } private set { bakedScaleMax = value; } }
         [SerializeField]
+        [Tooltip("Maximum potential scale to apply to baked instance.")]
         protected float bakedScaleMax = 1;
 
         public float BakedScaleMin { get { return bakedScaleMin; } private set { bakedScaleMin = value; } }
         [SerializeField]
+        [Tooltip("Minimum potential scale to apply to baked instance.")]
         protected float bakedScaleMin = 1;
 
         public bool BakedScaleOnSpawn { get { return bakedScaleOnSpawn; } private set { bakedScaleOnSpawn = value; } }
         [SerializeField]
+        [Tooltip("Should the mesh scale up to final size or start at it?.")]
         protected bool bakedScaleOnSpawn = true;
 
         public float BakedScaleTime { get { return bakedScaleTime; } private set { bakedScaleTime = value; } }
         [SerializeField]
+        [Tooltip("How long should it take?")]
         protected float bakedScaleTime = 1f;
 
+        //This is way less useful than I though. Params can just be created by modules. It should be removed.
         public ParameterBundle StartingParameters { get { return startingParameters; } private set { } }
-        [SerializeField] protected ParameterBundle startingParameters = new ParameterBundle();
+        [SerializeField]
+        [Tooltip("Dictionary of dynamic parameters to be passed through L system for custom modules")]
+        protected ParameterBundle startingParameters = new ParameterBundle();
 
         public RuleSet Rules { get { return rules; } private set { } }
-        [SerializeField] protected RuleSet rules = new RuleSet();
+        [SerializeField]
+        [Tooltip("Dictionary of rules (x becomes y) that will be used to generate new sentences from the original axiom")]
+        protected RuleSet rules = new RuleSet();
 
         public CharGameObjectDict Implementations { get { return implementations; } private set { } }
-        [SerializeField] protected CharGameObjectDict implementations = new CharGameObjectDict();
+        [SerializeField]
+        [Tooltip("How long should it take?")]
+        protected CharGameObjectDict implementations = new CharGameObjectDict();
 
         protected bool executed;
         protected ParameterBundle returnBundle = new ParameterBundle();
 
+        //Baked LSystems for reuse basd on module prefabIdentifier
         protected static Dictionary<string, GameObject> bakedProtoypes = new Dictionary<string, GameObject>();
 
         void Start()
@@ -124,7 +147,7 @@ namespace LSystem
             }
             else
             {
-                //TODO: This lags like crazy. Not suitable for complex objects. Move logic to Editor and save as prefab!
+                //TODO: This could be done off-line.
                 AnyExecute(bundle); //bake
 
                 transform.position = Vector3.zero;
@@ -144,7 +167,7 @@ namespace LSystem
 
                 gameObject.name = "Prototype_" + prefabIdentifier;
                 Kill(this); //the prototype must not be able to create new instances(they will do the same... etc)
-                //gameObject.hideFlags = HideFlags.HideInHierarchy;
+                gameObject.hideFlags = HideFlags.HideInHierarchy;
 
                 bakedProtoypes.Add(prefabIdentifier, gameObject);
                 gameObject.SetActive(false);
@@ -163,7 +186,6 @@ namespace LSystem
                 currentTime += Time.deltaTime;
                 yield return null;
             }
-            Debug.Log(endScale);
             instance.transform.localScale = new Vector3(endScale, endScale, endScale);
         }
 
@@ -204,10 +226,8 @@ namespace LSystem
             bundle.SetOrPut("Implementations", implementations);
             bundle.SetOrPut("RuleSet", rules);
 
-            if (!bundle.Exists("Position")) bundle.Put("Position", transform.position); //TODO: REMOVE. Is this used anywhere?
-
+            if (!bundle.Exists("Position")) bundle.Put("Position", transform.position); 
            
-
             if (!inheritHeading) bundle.SetOrPut("Heading", transform.up);
             else if (!bundle.Exists("Heading")) bundle.Put("Heading", transform.up);
 

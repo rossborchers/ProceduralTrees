@@ -3,6 +3,9 @@ using UnityEditor;
 
 namespace LSystem
 {
+    ///<summary>
+    /// New seed shortcut.
+    ///</summary>
     public class LSystemMenu
     {
         [MenuItem("LSystem/New Seed")]
