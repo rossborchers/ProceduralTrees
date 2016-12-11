@@ -5,7 +5,7 @@ using System.Collections.Generic;
 namespace LSystem
 {
     /// <summary>
-    /// Translates and draws a mesh along a heading, neighboring connects meshes to each other
+    /// Translates and draws a mesh with a rotation, neighboring connects meshes to each other
     /// </summary>
     public class Branch : Module 
     {
@@ -85,7 +85,7 @@ namespace LSystem
         public override void Bake(ParameterBundle bundle)
         {
             //Get parameters
-            Vector3 heading;
+            Quaternion rotation;
             Sentence sentence;
             CharGameObjectDict implementations;
             int generation;
@@ -93,7 +93,7 @@ namespace LSystem
 
             // Check valid state for growing
             if (!GetCoreParameters(bundle, out sentence, out implementations, out rules)
-             || !GetPositionParameters(bundle, out generation, out heading)) return;
+             || !GetPositionParameters(bundle, out generation, out rotation)) return;
 
             // Setup Renderer
             if ((filter = gameObject.GetComponent<MeshFilter>()) == null)
@@ -107,9 +107,9 @@ namespace LSystem
             branchRenderer.material = branchMaterial;
 
             //Match start position to previous position. As growth progresses position will be offset
-            //While heading stays the same
+            //While rotation stays the same
             transform.position = previous.transform.position;
-            transform.up = heading;
+            transform.rotation = rotation;
 
             // Try and pick up length and radius where last branch left off.
             float length, radius; 
@@ -146,9 +146,11 @@ namespace LSystem
                         mod.Bake(bundle);
                     }
                 }
-                endObject.transform.up = heading;
+                endObject.transform.rotation = rotation;
             }
-            transform.position += heading * length;
+
+            //TODO: used to be the heading.. does this work?
+            transform.position += transform.up * length;
 
             // Bake or reuse mesh.
             // Meshes are reused based on prefabIdentifier
@@ -179,7 +181,7 @@ namespace LSystem
             if (endObject != null)
             {
                 endObject.transform.position = transform.position;
-                endObject.transform.up = heading;
+                endObject.transform.rotation = rotation;
             }
 
             // Update parameters for next branch
@@ -203,7 +205,7 @@ namespace LSystem
         IEnumerator Grow(ParameterBundle bundle)
         {
             //Get parameters
-            Vector3 heading;
+            Quaternion rotation;
             Sentence sentence;
             CharGameObjectDict implementations;
             int generation;
@@ -211,7 +213,7 @@ namespace LSystem
 
             // Check valid state for growing
             if (!GetCoreParameters(bundle, out sentence, out implementations, out rules)
-             || !GetPositionParameters(bundle, out generation, out heading)) yield break;
+             || !GetPositionParameters(bundle, out generation, out rotation)) yield break;
 
             // Setup Renderer
             if ((filter = gameObject.GetComponent<MeshFilter>()) == null)
@@ -225,9 +227,9 @@ namespace LSystem
             branchRenderer.material = branchMaterial;
 
             // Match start position to previous position. As growth progresses position will be offset
-            // While heading stays the same
+            // While rotation stays the same
             transform.position = previous.transform.position;
-            transform.up = heading;
+            transform.rotation = rotation;
 
             // Try and pick up length and radius where last branch left off.
             float length, radius, growSpeed;
@@ -261,7 +263,7 @@ namespace LSystem
                         mod.Execute(bundle);
                     }
                   }
-                  endObject.transform.up = heading;
+                  endObject.transform.rotation = rotation;
             }
 
             // Update mesh and extend transform towards final position
@@ -269,7 +271,7 @@ namespace LSystem
             while(distance < length)
             {
                 float completionRatio = distance / length;
-                transform.position += heading * Mathf.Min(heading.magnitude * Time.deltaTime * Mathf.Lerp(startGrowSpeed,
+                transform.position += transform.up * Mathf.Min(/*heading.magnitude * */Time.deltaTime * Mathf.Lerp(startGrowSpeed,
                                                             growSpeed * growSpeedChangeCoefficient, completionRatio), length);
                 distance = Vector3.Distance(transform.position, previous.transform.position);
 
@@ -281,7 +283,7 @@ namespace LSystem
                 if(endObject != null)
                 {
                       endObject.transform.position = transform.position;
-                      endObject.transform.up = heading;
+                      endObject.transform.rotation = rotation;
                 }
                
                 yield return null;

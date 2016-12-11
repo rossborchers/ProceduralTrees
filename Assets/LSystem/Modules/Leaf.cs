@@ -100,7 +100,7 @@ namespace LSystem
             leafRenderer.material = leafMaterial;
 
             //Get parameters
-            Vector3 heading;
+            Quaternion rotation;
             Sentence sentence;
             CharGameObjectDict implementations;
             int generation;
@@ -108,10 +108,10 @@ namespace LSystem
 
             // Check valid state for growing
             if (!GetCoreParameters(bundle, out sentence, out implementations, out rules)
-             || !GetPositionParameters(bundle, out generation, out heading)) return;
+             || !GetPositionParameters(bundle, out generation, out rotation)) return;
 
             transform.position = previous.transform.position;
-            transform.up = heading;
+            transform.rotation = rotation;
 
             MeshFilter sharedFilter;
             if(bakedPrefabFilters.TryGetValue(prefabIdentifier, out sharedFilter))
@@ -151,7 +151,7 @@ namespace LSystem
         IEnumerator Grow(ParameterBundle bundle)
         {
             //Get parameters
-            Vector3 heading;
+            Quaternion rotation;
             Sentence sentence;
             CharGameObjectDict implementations;
             int generation;
@@ -159,7 +159,7 @@ namespace LSystem
 
             // Check valid state for growing
             if (!GetCoreParameters(bundle, out sentence, out implementations, out rules)
-             || !GetPositionParameters(bundle, out generation, out heading)) yield break;
+             || !GetPositionParameters(bundle, out generation, out rotation)) yield break;
 
             float medialSize,  lateralSize, growTime;
             if (bundle.Get("LeafMedialSize", out medialSize)) startMedialSize = medialSize;
@@ -167,7 +167,7 @@ namespace LSystem
             if (bundle.Get("LeafGrowTime", out growTime)) startGrowTime = growTime;
 
             transform.position = previous.transform.position;
-            transform.up = heading;
+            transform.rotation = rotation;
 
             float time = 1f;
             if (animate) time = 0f;

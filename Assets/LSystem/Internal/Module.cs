@@ -242,7 +242,7 @@ namespace LSystem
             return success;
         }
 
-        public bool GetPositionParameters(ParameterBundle bundle, out int generation, out Vector3 heading)
+        public bool GetPositionParameters(ParameterBundle bundle, out int generation, out Quaternion rotation)
         {
             bool success = true;
             if (!bundle.Get("Generation", out generation))
@@ -250,10 +250,10 @@ namespace LSystem
                 success = false;
                 Debug.LogError("Default parameter 'Generation' missing.", gameObject);
             }
-            if (!bundle.Get("Heading", out heading))
+            if (!bundle.Get("Rotation", out rotation))
             {
                 success = false;
-                Debug.LogError("Default parameter 'Heading' missing.", gameObject);
+                Debug.LogError("Default parameter 'Rotation' missing.", gameObject);
             }
             return success;
         }

@@ -17,7 +17,7 @@ namespace LSystem
         public void OnEnable()
         {
             serIsRoot = serializedObject.FindProperty("isRoot");
-            setInheritHeading = serializedObject.FindProperty("inheritHeading");
+            serInheritRotation = serializedObject.FindProperty("inheritRotation");
             serAxiom = serializedObject.FindProperty("axiom");
 
             serGenerateMode = serializedObject.FindProperty("generateMode");
@@ -48,7 +48,7 @@ namespace LSystem
 
             // Can multi edit
             EditorGUILayout.PropertyField(serIsRoot);
-            EditorGUILayout.PropertyField(setInheritHeading);
+            EditorGUILayout.PropertyField(serInheritRotation);
             EditorGUILayout.PropertyField(serAxiom);
 
             EditorGUILayout.Space();
@@ -81,8 +81,6 @@ namespace LSystem
 
                 EditorGUI.indentLevel--;
             }
-
-            
 
             serializedObject.ApplyModifiedProperties();
 
@@ -532,7 +530,7 @@ namespace LSystem
         protected int implementationAddExistingIndex;
 
         protected SerializedProperty serIsRoot;
-        protected SerializedProperty setInheritHeading;
+        protected SerializedProperty serInheritRotation;
         protected SerializedProperty serAxiom;
 
         protected SerializedProperty serGenerateMode;

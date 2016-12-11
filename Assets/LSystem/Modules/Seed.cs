@@ -26,10 +26,10 @@ namespace LSystem
         protected string axiom;
 
         [HideInInspector]
-        public bool InheritHeading { get { return isRoot; } private set { isRoot = value; } }
+        public bool InheritRotation { get { return inheritRotation; } private set { inheritRotation = value; } }
         [SerializeField]
-        [Tooltip("Does the LSystem Inherit the previous systems heading?")]
-        protected bool inheritHeading;
+        [Tooltip("Does the LSystem Inherit the previous systems rotation?")]
+        protected bool inheritRotation;
 
         public GenMode GenerateMode { get { return generateMode; } private set { generateMode = value; } }
         [SerializeField]
@@ -109,10 +109,11 @@ namespace LSystem
         {
             if (dead) return;
 
-            Vector3 heading;
-            if (!bundle.Get("Heading", out heading))
+            Quaternion rotation;
+            if (!bundle.Get("Rotation", out rotation))
             {
-                heading = Vector3.up;
+                //TODO: used to be Vector3.up. Equivelent?
+                rotation = Quaternion.identity;
             }
 
             Vector3 position = transform.position; 
@@ -123,7 +124,7 @@ namespace LSystem
                 parent = previous.transform;
             }
 
-            Quaternion rotation = Quaternion.Euler(UnityEngine.Random.Range(bakedRotationMin.x, bakedRotationMax.x),
+            Quaternion bakedRot = Quaternion.Euler(UnityEngine.Random.Range(bakedRotationMin.x, bakedRotationMax.x),
                 UnityEngine.Random.Range(bakedRotationMin.y, bakedRotationMax.y),
                 UnityEngine.Random.Range(bakedRotationMin.z, bakedRotationMax.z));
 
@@ -136,11 +137,11 @@ namespace LSystem
             if (bakedProtoypes.TryGetValue(prefabIdentifier, out prototypeInstance))
             {
                 if (parent == null) parent = transform;
-                instance = (GameObject)Instantiate(prototypeInstance, position, rotation, parent);
+                instance = (GameObject)Instantiate(prototypeInstance, position, bakedRot, parent);
                 instance.transform.localScale = scale;
                 instance.name = "Instance_"+prefabIdentifier;
 
-                instance.transform.up = heading;
+                instance.transform.rotation = rotation;
                 instance.SetActive(true);
 
                 if (bakedScaleOnSpawn) StartCoroutine(BakedScale(instance));
@@ -225,13 +226,20 @@ namespace LSystem
             bundle.SetOrPut("Sentence", sentence);
             bundle.SetOrPut("Implementations", implementations);
             bundle.SetOrPut("RuleSet", rules);
+        
 
-            if (!bundle.Exists("Position")) bundle.Put("Position", transform.position); 
-           
-            if (!inheritHeading) bundle.SetOrPut("Heading", transform.up);
-            else if (!bundle.Exists("Heading")) bundle.Put("Heading", transform.up);
+            if (!bundle.Exists("Position")) bundle.Put("Position", transform.position);
 
-            //execute modules in the axiom
+            if (!inheritRotation)
+            {
+                bundle.SetOrPut("Rotation", transform.rotation);
+            }
+            else if (!bundle.Exists("Rotation"))
+            {
+                bundle.Put("Rotation", transform.rotation);  
+            }
+
+            // execute modules in the axiom
             if (!executed)
             {
                 executed = true;

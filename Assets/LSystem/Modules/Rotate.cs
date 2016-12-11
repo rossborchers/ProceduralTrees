@@ -3,7 +3,7 @@
 namespace LSystem
 {
     /// <summary>
-    /// Rotate an incoming heading and call the next module.
+    /// Rotate an incoming module and call the next module.
     /// </summary>
     public class Rotate : Module
     {
@@ -42,19 +42,21 @@ namespace LSystem
             RuleSet rules;
             if (!GetCoreParameters(bundle, out sentence, out implementations, out rules)) fatal = true;
 
-            // Perform simple rotation on heading.
+            // Perform rotation on transform based.
             // Note that many rotations are not easily possible with this method. Needs to be improved.
-            Vector3 heading;
-            if (bundle.Get("Heading", out heading))
+            Quaternion rotation;
+            if (bundle.Get("Rotation", out rotation))
             {
-                heading = Quaternion.Euler(new Vector3( Random.Range(eulerAnglesMin.x, eulerAnglesMax.x),
+             
+                //apply pitch yaw and roll to the rotation
+                rotation = rotation * Quaternion.Euler(new Vector3( Random.Range(eulerAnglesMin.x, eulerAnglesMax.x),
                                                         Random.Range(eulerAnglesMin.y, eulerAnglesMax.y),
-                                                        Random.Range(eulerAnglesMin.z, eulerAnglesMax.z))) * heading;
-                bundle.Set("Heading", heading);
+                                                        Random.Range(eulerAnglesMin.z, eulerAnglesMax.z)));
+                bundle.Set("Rotation", rotation);
             }
             else
             {
-                Debug.LogWarning("Default parameter 'Heading' missing. Skipping Rotation", gameObject);
+                Debug.LogWarning("Default parameter 'Rotation' missing. Skipping Rotation", gameObject);
             }
             if (!fatal)
             {
