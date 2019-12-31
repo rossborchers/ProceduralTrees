@@ -1,5 +1,5 @@
 # Procedural Trees
-LSystem for Unity.
+LSystem demonstration for Unity.
 
 ![Looping L-system](https://media.giphy.com/media/cNNmnpP1awBVCYYRCV/giphy.gif)
 
