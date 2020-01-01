@@ -18,6 +18,6 @@ A naive implementation using text. Quite slow but easy to understand. It allows 
 
 ![Seed](https://media.giphy.com/media/f8PbJ8sqfWptR9b1Sq/giphy.gif)
 
-There is also a procedural growing leaf script that generates a mesh on the fly and connects to the l-system. It's very expensive though.
+There is also a procedural growing leaf script that generates a mesh on the fly and connects to the LSystem. It's very expensive though.
 
-**I would not use this in production without optimizing and fixing some bugs.**
+**I would not use this in production without optimizing a lot!**
