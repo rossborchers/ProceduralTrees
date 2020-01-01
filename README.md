@@ -6,7 +6,7 @@ Based on the book [The Algorithmic Beauty of Plants](https://www.amazon.com/Algo
 
 Accurately reproduces patterns shown in the book.
 
-![Looping L-system](https://media.giphy.com/media/cNNmnpP1awBVCYYRCV/giphy.gif)
+![Looping L-system](https://media.giphy.com/media/JNmA943xA83kQpToPm/giphy.gif)
 
 The parameters have been modified a bit since the gif was taken but the underlying algorithm still works.
 The example scene has a fully deterministic "random" loop. I used to render the gif above. There are some tricks already being used to improve performance such as pre-baking but unfortunately, it's still not necessarily realtime depending on your computer. 
