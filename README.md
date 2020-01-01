@@ -14,7 +14,7 @@ The example scene has a fully deterministic "random" loop. I used to render the 
 
 ![Seed](https://media.giphy.com/media/Q7Wf3iIPOP8y4xIRV5/giphy.gif)
 
-A naive implementation using text. Quite slow but easy to understand. It allows you to map characts to arbitrary behavior by extending `LSystem.Module` It's pretty extensible but has some performance issues.
+A naive implementation using text. Quite slow but easy to understand. It allows you to map characters to arbitrary behavior by extending `LSystem.Module` It's pretty extensible but has some performance issues.
 
 ![Seed](https://media.giphy.com/media/f8PbJ8sqfWptR9b1Sq/giphy.gif)
 
