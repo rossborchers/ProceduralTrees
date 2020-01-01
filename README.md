@@ -17,10 +17,10 @@ A naive implementation using text. Quite slow but easy to understand. It allows 
 
 ![Seed](https://media.giphy.com/media/f8PbJ8sqfWptR9b1Sq/giphy.gif)
 
-There is also a procedural growing leaf script that generates a mesh on the fly and connects to the LSystem. It's very expensive though.
+There is also a procedural growing leaf script that generates a mesh on the fly and connects to the LSystem.
 
-# Beware
-- This was a demonstration made for a job interview, Its very slow. **Depending on your use case I would be wary to use this in production without optimizing a lot!**  There are some tricks already being used to improve performance such as pre-baking but unfortunately, it's still not necessarily realtime depending on your computer.
+# Notes
+- This was a demonstration made for a job interview, It can be slow. **Depending on your use case I would be wary to use this in production without some optimization**  There are some tricks already being used to improve performance such as pre-baking but unfortunately, it's still not necessarily realtime depending on your computer.
 - The parameters have been modified a bit since these gifs were taken but the underlying algorithm works the same.
 
 
