@@ -4,7 +4,7 @@ Based on the book [The Algorithmic Beauty of Plants](https://www.amazon.com/Algo
 
 ![Looping L-system](https://media.giphy.com/media/JNmA943xA83kQpToPm/giphy.gif)
 
-This example has a fully deterministic "random" loop. I used to render the gif above. There are some tricks already being used to improve performance such as pre-baking but unfortunately, it's still not necessarily realtime depending on your computer. This was rendered offline.
+The above example has a fully deterministic "random" loop. I used to render the gif above. There are some tricks already being used to improve performance such as pre-baking but unfortunately, it's still not necessarily realtime depending on your computer. This was rendered offline.
 
 ![Reproducing results in the book](https://media.giphy.com/media/St3rRONeAxaap0PEVK/giphy.gif)
 
