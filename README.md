@@ -4,7 +4,7 @@ Based on the book [The Algorithmic Beauty of Plants](https://www.amazon.com/Algo
 
 ![Looping L-system](https://media.giphy.com/media/JNmA943xA83kQpToPm/giphy.gif)
 
-The above example has a fully deterministic "random" loop. I used to render the gif above. There are some tricks already being used to improve performance such as pre-baking but unfortunately, it's still not necessarily realtime depending on your computer. This was rendered offline.
+The above example has a fully deterministic "random" loop. 
 
 ![Reproducing results in the book](https://media.giphy.com/media/St3rRONeAxaap0PEVK/giphy.gif)
 
@@ -19,5 +19,8 @@ A naive implementation using text. Quite slow but easy to understand. It allows 
 
 There is also a procedural growing leaf script that generates a mesh on the fly and connects to the LSystem. It's very expensive though.
 
-The parameters have been modified a bit since these gifs were taken but the underlying algorithm works the same.
-**I would not use this in production without optimizing a lot!**
+# Beware
+- This was a demonstration made for a job interview, Its very slow. **Depending on your use case I would be wary to use this in production without optimizing a lot!**  There are some tricks already being used to improve performance such as pre-baking but unfortunately, it's still not necessarily realtime depending on your computer.
+- The parameters have been modified a bit since these gifs were taken but the underlying algorithm works the same.
+
+
